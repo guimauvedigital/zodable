@@ -6,6 +6,4 @@ plugins {
 
 dependencies {
     implementation("dev.kaccelero:core:0.4.5")
-    implementation(project(":zodable-ksp-processor"))
-    ksp(project(":zodable-ksp-processor"))
 }

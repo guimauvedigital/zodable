@@ -1,36 +1,78 @@
 package digital.guimauve.zodable
 
+import com.google.devtools.ksp.gradle.KspExtension
 import org.gradle.api.Plugin
 import org.gradle.api.Project
 import org.gradle.api.tasks.Exec
 import org.gradle.kotlin.dsl.register
+import java.io.File
 
 abstract class ZodablePlugin : Plugin<Project> {
 
     override fun apply(project: Project) {
-        project.configureKspProcessor()
-        project.configureTasks()
+        val outputPath = project.file("build/zodable")
+        project.configureKspProcessor(outputPath)
+        project.configureTasks(outputPath)
     }
 
-    private fun Project.configureKspProcessor() {
-        // TODO: Fix this
+    private fun Project.configureKspProcessor(outputPath: File) {
         project.pluginManager.apply("com.google.devtools.ksp")
+        project.dependencies.add("implementation", project.dependencies.create(project(":zodable-ksp-processor")))
         project.dependencies.add("ksp", project.dependencies.create(project(":zodable-ksp-processor")))
+
+        project.plugins.withId("com.google.devtools.ksp") {
+            val kspExtension = project.extensions.getByType(KspExtension::class.java)
+            kspExtension.arg("outputPath", outputPath.absolutePath)
+        }
     }
 
-    private fun Project.configureTasks() {
-        val compileTypeScript = project.tasks.register<Exec>("compileTypeScript") {
+    private fun Project.configureTasks(outputPath: File) {
+        val setupZodablePackage = project.tasks.register<Exec>("setupZodablePackage") {
             group = "build"
-            description = "Compile TypeScript schemas using tsc"
+            description = "Setup zodable npm package"
 
-            workingDir = project.file("build/generated/zod-schemas")
-            commandLine = listOf("npx", "tsc")
+            workingDir = outputPath
+            commandLine = listOf("npm", "init", "-y")
 
             dependsOn("kspKotlin")
-        }
 
+            doLast {
+                exec {
+                    workingDir = outputPath
+                    commandLine = listOf("npm", "pkg", "set", "name=${project.name}")
+                }
+                exec {
+                    workingDir = outputPath
+                    commandLine = listOf("npm", "pkg", "set", "version=${project.version}")
+                }
+                exec {
+                    workingDir = outputPath
+                    commandLine = listOf("npm", "pkg", "set", "main=schemas.js")
+                }
+                exec {
+                    workingDir = outputPath
+                    commandLine = listOf("npm", "pkg", "set", "types=schemas.d.ts")
+                }
+                exec {
+                    workingDir = outputPath
+                    commandLine = listOf("npm", "install", "typescript", "--save-dev")
+                }
+                exec {
+                    workingDir = outputPath
+                    commandLine = listOf("npm", "install", "zod")
+                }
+                exec {
+                    workingDir = outputPath
+                    commandLine = listOf("npx", "tsc", "--init", "-d")
+                }
+                exec {
+                    workingDir = outputPath
+                    commandLine = listOf("npx", "tsc")
+                }
+            }
+        }
         project.tasks.named("build").configure {
-            dependsOn(compileTypeScript)
+            dependsOn(setupZodablePackage)
         }
     }
 

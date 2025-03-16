@@ -1,6 +1,5 @@
 package digital.guimauve.zodable
 
-import com.google.devtools.ksp.processing.Dependencies
 import com.google.devtools.ksp.processing.Resolver
 import com.google.devtools.ksp.processing.SymbolProcessor
 import com.google.devtools.ksp.processing.SymbolProcessorEnvironment
@@ -9,20 +8,20 @@ import com.google.devtools.ksp.symbol.KSClassDeclaration
 import com.google.devtools.ksp.symbol.KSPropertyDeclaration
 import com.google.devtools.ksp.symbol.KSType
 import java.io.OutputStreamWriter
+import java.nio.file.Paths
 
 class ZodSchemaProcessor(
     private val env: SymbolProcessorEnvironment,
 ) : SymbolProcessor {
 
     override fun process(resolver: Resolver): List<KSAnnotated> {
+        val outputPath = env.options["outputPath"] ?: return emptyList()
         val annotatedClasses = resolver.getSymbolsWithAnnotation(Zodable::class.qualifiedName!!)
             .filterIsInstance<KSClassDeclaration>()
 
         if (annotatedClasses.iterator().hasNext()) {
-            val file = env.codeGenerator.createNewFile(
-                Dependencies(false, *annotatedClasses.map { it.containingFile!! }.toList().toTypedArray()),
-                "zodable", "schemas", "ts"
-            )
+            val outputPath = Paths.get(outputPath).toFile().also { it.mkdirs() }
+            val file = outputPath.resolve("schemas.ts").outputStream()
 
             OutputStreamWriter(file, Charsets.UTF_8).use { writer ->
                 writer.write("import {z} from \"zod\";\n\n")
