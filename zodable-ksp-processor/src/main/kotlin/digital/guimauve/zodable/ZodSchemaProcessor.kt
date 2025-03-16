@@ -24,7 +24,7 @@ class ZodSchemaProcessor(
             val file = outputPath.resolve("schemas.ts").outputStream()
 
             OutputStreamWriter(file, Charsets.UTF_8).use { writer ->
-                writer.write("import {z} from \"zod\";\n\n")
+                writer.write("import {z} from \"zod\"\n\n")
                 for (classDeclaration in annotatedClasses) {
                     val className = classDeclaration.simpleName.asString()
                     val properties = classDeclaration.getAllProperties().joinToString(",\n    ") { prop ->

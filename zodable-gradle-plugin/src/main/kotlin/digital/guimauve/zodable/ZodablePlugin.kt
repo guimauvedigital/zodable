@@ -16,18 +16,18 @@ abstract class ZodablePlugin : Plugin<Project> {
     }
 
     private fun Project.configureKspProcessor(outputPath: File) {
-        project.pluginManager.apply("com.google.devtools.ksp")
-        project.dependencies.add("implementation", project.dependencies.create(project(":zodable-ksp-processor")))
-        project.dependencies.add("ksp", project.dependencies.create(project(":zodable-ksp-processor")))
+        pluginManager.apply("com.google.devtools.ksp")
+        dependencies.add("implementation", dependencies.create(project(":zodable-ksp-processor")))
+        dependencies.add("ksp", dependencies.create(project(":zodable-ksp-processor")))
 
-        project.plugins.withId("com.google.devtools.ksp") {
-            val kspExtension = project.extensions.getByType(KspExtension::class.java)
+        plugins.withId("com.google.devtools.ksp") {
+            val kspExtension = extensions.getByType(KspExtension::class.java)
             kspExtension.arg("outputPath", outputPath.absolutePath)
         }
     }
 
     private fun Project.configureTasks(outputPath: File) {
-        val setupZodablePackage = project.tasks.register<Exec>("setupZodablePackage") {
+        val setupZodablePackage = tasks.register<Exec>("setupZodablePackage") {
             group = "build"
             description = "Setup zodable npm package"
 
@@ -71,7 +71,7 @@ abstract class ZodablePlugin : Plugin<Project> {
                 }
             }
         }
-        project.tasks.named("build").configure {
+        tasks.named("build").configure {
             dependsOn(setupZodablePackage)
         }
     }
