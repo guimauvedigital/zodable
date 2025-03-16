@@ -39,10 +39,10 @@ abstract class ZodablePlugin : Plugin<Project> {
         val kspConfig = getKspConfig()
 
         dependencies {
-            add(kspConfig.apiConfigurationName, project(":zodable-annotations"))
-            add(kspConfig.kspConfigurationName, project(":zodable-ksp-processor"))
-            //add(kspConfig.apiConfigurationName, "digital.guimauve.zodable:zodable-ksp-processor:$zodableVersion")
-            //add(kspConfig.kspConfigurationName, "digital.guimauve.zodable:zodable-ksp-processor:$zodableVersion")
+            //add(kspConfig.apiConfigurationName, project(":zodable-annotations"))
+            //add(kspConfig.kspConfigurationName, project(":zodable-ksp-processor"))
+            add(kspConfig.apiConfigurationName, "digital.guimauve.zodable:zodable-annotations:$zodableVersion")
+            add(kspConfig.kspConfigurationName, "digital.guimauve.zodable:zodable-ksp-processor:$zodableVersion")
         }
 
         plugins.withId("com.google.devtools.ksp") {
