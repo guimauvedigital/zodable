@@ -11,6 +11,8 @@ plugins {
 
 rootProject.name = "zodable"
 includeBuild("zodable-gradle-plugin")
+include(":zodable-annotations")
 include(":zodable-ksp-processor")
 
 include(":sample-package")
+include(":sample-package-multiplatform")

@@ -4,34 +4,34 @@ plugins {
     id("com.vanniktech.maven.publish")
 }
 
-dependencies {
-    implementation("com.google.devtools.ksp:symbol-processing-api:2.1.10-1.0.30")
-}
-
 mavenPublishing {
     publishToMavenCentral(com.vanniktech.maven.publish.SonatypeHost.CENTRAL_PORTAL)
     signAllPublications()
     pom {
         name.set("zodable-ksp-processor")
         description.set("KSP processor for Zodable Gradle plugin.")
-        url.set("https://github.com/guimauvedigital/zodable")
-
+        url.set(project.ext.get("url")?.toString())
         licenses {
             license {
-                name.set("GPL-3.0")
-                url.set("https://opensource.org/licenses/GPL-3.0")
+                name.set(project.ext.get("license.name")?.toString())
+                url.set(project.ext.get("license.url")?.toString())
             }
         }
         developers {
             developer {
-                id.set("NathanFallet")
-                name.set("Nathan Fallet")
-                email.set("contact@nathanfallet.me")
-                url.set("https://www.nathanfallet.me")
+                id.set(project.ext.get("developer.id")?.toString())
+                name.set(project.ext.get("developer.name")?.toString())
+                email.set(project.ext.get("developer.email")?.toString())
+                url.set(project.ext.get("developer.url")?.toString())
             }
         }
         scm {
-            url.set("https://github.com/guimauvedigital/zodable.git")
+            url.set(project.ext.get("scm.url")?.toString())
         }
     }
+}
+
+dependencies {
+    implementation("com.google.devtools.ksp:symbol-processing-api:2.1.10-1.0.30")
+    api(project(":zodable-annotations"))
 }

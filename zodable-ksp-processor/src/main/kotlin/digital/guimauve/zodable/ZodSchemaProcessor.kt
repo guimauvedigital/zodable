@@ -15,7 +15,7 @@ class ZodSchemaProcessor(
 ) : SymbolProcessor {
 
     override fun process(resolver: Resolver): List<KSAnnotated> {
-        val outputPath = env.options["outputPath"] ?: return emptyList()
+        val outputPath = env.options["zodableOutputPath"] ?: return emptyList()
         val annotatedClasses = resolver.getSymbolsWithAnnotation(Zodable::class.qualifiedName!!)
             .filterIsInstance<KSClassDeclaration>()
 
