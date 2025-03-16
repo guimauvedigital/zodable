@@ -25,9 +25,9 @@ gradlePlugin {
         create("zodable-gradle-plugin") {
             id = "digital.guimauve.zodable"
             implementationClass = "digital.guimauve.zodable.ZodablePlugin"
-            displayName = ""
-            description = ""
-            tags = listOf("zod", "ts")
+            displayName = "Zodable"
+            description = "Generate zod schemas from Kotlin data classes."
+            tags = listOf("zod", "ts", "ksp")
         }
     }
 }
