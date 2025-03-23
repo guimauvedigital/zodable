@@ -1,5 +1,6 @@
 package digital.guimauve.zodable.generators
 
+import com.google.devtools.ksp.processing.SymbolProcessorEnvironment
 import com.google.devtools.ksp.symbol.ClassKind
 import com.google.devtools.ksp.symbol.KSClassDeclaration
 import com.google.devtools.ksp.symbol.KSPropertyDeclaration
@@ -7,11 +8,13 @@ import com.google.devtools.ksp.symbol.KSType
 import digital.guimauve.zodable.config.GeneratorConfig
 import java.io.OutputStreamWriter
 
-class TypescriptGenerator : ZodableGenerator {
+class TypescriptGenerator(
+    private val env: SymbolProcessorEnvironment,
+) : ZodableGenerator {
 
     override fun generateFiles(annotatedClasses: Sequence<KSClassDeclaration>, config: GeneratorConfig) {
         val src = config.outputPath.resolve("src").also { it.mkdirs() }
-        val importedPackages = mutableMapOf<String, MutableSet<String>>()
+        val importedPackages = mutableSetOf<String>()
         val indexFile = src.resolve("index.ts").outputStream()
         OutputStreamWriter(indexFile, Charsets.UTF_8).use { writer ->
             for (classDeclaration in annotatedClasses) {
@@ -45,9 +48,10 @@ class TypescriptGenerator : ZodableGenerator {
                     classDeclaration.annotations.forEach { annotation ->
                         if (annotation.shortName.asString() == "ZodImport") {
                             val externalName = annotation.arguments.firstOrNull()?.value as? String
-                            if (externalName != null) {
-                                importedPackages.computeIfAbsent(externalName) { mutableSetOf() }.add(className)
-                                schemaWriter.write("import {${className}Schema} from '$externalName'\n")
+                            val externalPackageName = annotation.arguments.lastOrNull()?.value as? String
+                            if (externalName != null && externalPackageName != null) {
+                                importedPackages.add(externalPackageName)
+                                schemaWriter.write("import {${externalName}Schema} from '$externalPackageName'\n")
                             }
                         }
                     }
@@ -66,7 +70,7 @@ class TypescriptGenerator : ZodableGenerator {
 
         val dependenciesFile = config.outputPath.resolve("dependencies.txt").outputStream()
         OutputStreamWriter(dependenciesFile, Charsets.UTF_8).use { depWriter ->
-            importedPackages.keys.forEach { depWriter.write("$it\n") }
+            importedPackages.forEach { depWriter.write("$it\n") }
         }
     }
 
@@ -118,7 +122,10 @@ class TypescriptGenerator : ZodableGenerator {
                     imports += classDeclaration.packageName.asString()
                         .replace(".", "/") + "/" + classDeclaration.simpleName.asString()
                     "${classDeclaration.simpleName.asString()}Schema"
-                } else "z.unknown()"
+                } else {
+                    env.logger.warn("Unsupported type ${type.declaration.simpleName}, using z.unknown()")
+                    "z.unknown()"
+                }
             }
         }
         return Pair(if (isNullable) "$zodType${config.optionals}" else zodType, imports)

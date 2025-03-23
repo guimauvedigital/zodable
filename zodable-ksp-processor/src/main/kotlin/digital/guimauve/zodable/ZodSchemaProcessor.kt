@@ -10,7 +10,7 @@ import digital.guimauve.zodable.generators.TypescriptGenerator
 import java.nio.file.Paths
 
 class ZodSchemaProcessor(
-    env: SymbolProcessorEnvironment,
+    private val env: SymbolProcessorEnvironment,
 ) : SymbolProcessor {
 
     val outputPath = env.options["zodableOutputPath"] ?: ""
@@ -25,10 +25,9 @@ class ZodSchemaProcessor(
         val outputPath = Paths.get(outputPath).toFile().also { it.mkdirs() }
         val config = GeneratorConfig(outputPath, inferTypes, coerceMapKeys, optionals)
 
-        TypescriptGenerator().generateFiles(annotatedClasses, config)
+        TypescriptGenerator(env).generateFiles(annotatedClasses, config)
 
         return emptyList()
     }
-
 
 }

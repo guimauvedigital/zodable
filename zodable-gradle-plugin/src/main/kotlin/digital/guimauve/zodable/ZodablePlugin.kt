@@ -85,19 +85,23 @@ abstract class ZodablePlugin : Plugin<Project> {
             dependsOn(kspConfig.taskName)
             doLast {
                 listOf(
-                    listOf("npm", "pkg", "set", "name=${extension.packageName.get()}"),
-                    listOf("npm", "pkg", "set", "version=${extension.packageVersion.get()}"),
-                    listOf("npm", "pkg", "set", "main=src/index.js"),
-                    listOf("npm", "pkg", "set", "types=src/index.d.ts"),
-                    listOf("npm", "pkg", "set", "files[0]=src/**/*"),
-                    listOf("npm", "install", "typescript", "--save-dev"),
-                    listOf("npm", "install", "zod@latest"),
-                    listOf("npx", "tsc", "--init", "-d", "--baseUrl", "./"),
-                    listOf("npx", "tsc")
+                    ExecCommand(listOf("npm", "pkg", "set", "name=${extension.packageName.get()}")),
+                    ExecCommand(listOf("npm", "pkg", "set", "version=${extension.packageVersion.get()}")),
+                    ExecCommand(listOf("npm", "pkg", "set", "main=src/index.js")),
+                    ExecCommand(listOf("npm", "pkg", "set", "types=src/index.d.ts")),
+                    ExecCommand(listOf("npm", "pkg", "set", "files[0]=src/**/*")),
+                    ExecCommand(listOf("npm", "install", "typescript", "--save-dev")),
+                    ExecCommand(listOf("npm", "install", "zod@latest")),
+                    ExecCommand(listOf("xargs", "npm", "install"), "dependencies.txt"),
+                    ExecCommand(listOf("npx", "tsc", "--init", "-d", "--baseUrl", "./")),
+                    ExecCommand(listOf("npx", "tsc"))
                 ).forEach { command ->
                     exec {
                         workingDir = outputPath
-                        commandLine = command
+                        commandLine = command.commandLine
+                        command.standardInput?.let {
+                            standardInput = outputPath.resolve(it).inputStream()
+                        }
                     }
                 }
             }
