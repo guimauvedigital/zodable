@@ -63,6 +63,7 @@ abstract class ZodablePlugin : Plugin<Project> {
 
         plugins.withId("com.google.devtools.ksp") {
             extensions.getByType<KspExtension>().apply {
+                arg("zodablePackageName", extension.packageName.get())
                 arg("zodableOutputPath", outputPath.absolutePath)
                 arg("zodableInferTypes", extension.inferTypes.get().toString())
                 arg("zodableCoerceMapKeys", extension.coerceMapKeys.get().toString())

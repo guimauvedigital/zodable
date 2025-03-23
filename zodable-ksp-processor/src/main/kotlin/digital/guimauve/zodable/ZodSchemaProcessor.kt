@@ -13,6 +13,7 @@ class ZodSchemaProcessor(
     private val env: SymbolProcessorEnvironment,
 ) : SymbolProcessor {
 
+    val packageName = env.options["zodablePackageName"] ?: "zodable"
     val outputPath = env.options["zodableOutputPath"] ?: ""
     val inferTypes = env.options["zodableInferTypes"].equals("true")
     val coerceMapKeys = env.options["zodableCoerceMapKeys"].equals("true")
@@ -23,7 +24,7 @@ class ZodSchemaProcessor(
             .filterIsInstance<KSClassDeclaration>()
 
         val outputPath = Paths.get(outputPath).toFile().also { it.mkdirs() }
-        val config = GeneratorConfig(outputPath, inferTypes, coerceMapKeys, optionals)
+        val config = GeneratorConfig(packageName, outputPath, inferTypes, coerceMapKeys, optionals)
 
         TypescriptGenerator(env).generateFiles(annotatedClasses, config)
 

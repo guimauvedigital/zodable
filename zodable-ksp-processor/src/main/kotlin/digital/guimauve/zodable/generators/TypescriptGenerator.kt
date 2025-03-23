@@ -1,80 +1,88 @@
 package digital.guimauve.zodable.generators
 
 import com.google.devtools.ksp.processing.SymbolProcessorEnvironment
-import com.google.devtools.ksp.symbol.ClassKind
 import com.google.devtools.ksp.symbol.KSClassDeclaration
 import com.google.devtools.ksp.symbol.KSPropertyDeclaration
 import com.google.devtools.ksp.symbol.KSType
 import digital.guimauve.zodable.config.GeneratorConfig
+import digital.guimauve.zodable.config.Import
+import java.io.File
 import java.io.OutputStreamWriter
 
 class TypescriptGenerator(
     private val env: SymbolProcessorEnvironment,
-) : ZodableGenerator {
+) : ZodableGenerator() {
 
-    override fun generateFiles(annotatedClasses: Sequence<KSClassDeclaration>, config: GeneratorConfig) {
-        val src = config.outputPath.resolve("src").also { it.mkdirs() }
-        val importedPackages = mutableSetOf<String>()
-        val indexFile = src.resolve("index.ts").outputStream()
-        OutputStreamWriter(indexFile, Charsets.UTF_8).use { writer ->
-            for (classDeclaration in annotatedClasses) {
-                val className = classDeclaration.simpleName.asString()
-                val packageName = classDeclaration.packageName.asString().replace(".", "/")
-                src.resolve(packageName).mkdirs()
-                val file = src.resolve("$packageName/$className.ts").outputStream()
-                OutputStreamWriter(file, Charsets.UTF_8).use { schemaWriter ->
-                    val imports = mutableSetOf<String>()
-                    var properties = ""
+    override fun resolveSourceFolder(config: GeneratorConfig): File {
+        return config.outputPath.resolve("src")
+    }
 
-                    if (classDeclaration.classKind == ClassKind.ENUM_CLASS) {
-                        properties = classDeclaration.declarations.filterIsInstance<KSClassDeclaration>()
-                            .map { it.simpleName.asString() }
-                            .joinToString(", ") { "\"$it\"" }
-                    } else {
-                        val propertiesToInclude = classDeclaration.getAllProperties().filter { it.hasBackingField }
-                        properties = propertiesToInclude.joinToString(",\n  ") { prop ->
-                            val name = prop.simpleName.asString()
-                            val (type, localImports) = resolveZodType(prop, config)
-                            imports.addAll(localImports)
-                            "$name: $type"
-                        }
-                    }
+    override fun resolveDependenciesFile(config: GeneratorConfig): File {
+        return config.outputPath.resolve("dependencies.txt")
+    }
 
-                    schemaWriter.write("import {z} from 'zod'\n")
-                    imports.forEach { import ->
-                        val importName = import.split("/").last()
-                        schemaWriter.write("import {${importName}Schema} from 'src/$import'\n")
-                    }
-                    classDeclaration.annotations.forEach { annotation ->
-                        if (annotation.shortName.asString() == "ZodImport") {
-                            val externalName = annotation.arguments.firstOrNull()?.value as? String
-                            val externalPackageName = annotation.arguments.lastOrNull()?.value as? String
-                            if (externalName != null && externalPackageName != null) {
-                                importedPackages.add(externalPackageName)
-                                schemaWriter.write("import {${externalName}Schema} from '$externalPackageName'\n")
-                            }
-                        }
-                    }
+    override fun resolveIndexFile(sourceFolder: File, config: GeneratorConfig): File {
+        return sourceFolder.resolve("index.ts")
+    }
 
-                    schemaWriter.write("\nexport const ${className}Schema = ")
-                    if (classDeclaration.classKind == ClassKind.ENUM_CLASS) {
-                        schemaWriter.write("z.enum([\n  $properties\n])\n")
-                    } else {
-                        schemaWriter.write("z.object({\n  $properties\n})\n")
-                    }
-                    if (config.inferTypes) schemaWriter.write("export type $className = z.infer<typeof ${className}Schema>\n")
-                }
-                writer.write("export * from 'src/$packageName/$className'\n")
-            }
-        }
+    override fun resolveClassFile(sourceFolder: File, packageName: String, name: String): File {
+        return sourceFolder.resolve("$packageName/$name.ts")
+    }
 
-        val dependenciesFile = config.outputPath.resolve("dependencies.txt").outputStream()
-        OutputStreamWriter(dependenciesFile, Charsets.UTF_8).use { depWriter ->
-            importedPackages.forEach { depWriter.write("$it\n") }
+    override fun generateImports(
+        imports: Set<Import>,
+        writer: OutputStreamWriter,
+        config: GeneratorConfig,
+    ) {
+        writer.write("import {z} from 'zod'\n")
+        imports.forEach { (importName, import, isEternal) ->
+            writer.write("import {${importName}Schema} from '${if (!isEternal) "src/" else ""}$import'\n")
         }
     }
 
-    private fun resolveZodType(prop: KSPropertyDeclaration, config: GeneratorConfig): Pair<String, List<String>> {
+    override fun generateIndexExport(
+        name: String,
+        packageName: String,
+        writer: OutputStreamWriter,
+        config: GeneratorConfig,
+    ) {
+        writer.write("export * from 'src/$packageName/$name'\n")
+    }
+
+    override fun generateClassSchema(
+        name: String,
+        properties: Set<Pair<String, String>>,
+        writer: OutputStreamWriter,
+        config: GeneratorConfig,
+    ) {
+        val body = properties.joinToString(",\n  ") { (name, type) -> "$name: $type" }
+        writer.write("\nexport const ${name}Schema = z.object({\n  $body\n})\n")
+        generateInferType(name, writer, config)
+    }
+
+    override fun generateEnumSchema(
+        name: String,
+        values: Set<String>,
+        writer: OutputStreamWriter,
+        config: GeneratorConfig,
+    ) {
+        val body = values.joinToString(", ") { "\"$it\"" }
+        writer.write("export const ${name}Schema = z.enum([\n  $body\n])\n")
+        generateInferType(name, writer, config)
+    }
+
+    fun generateInferType(
+        name: String,
+        writer: OutputStreamWriter,
+        config: GeneratorConfig,
+    ) {
+        if (config.inferTypes) writer.write("export type $name = z.infer<typeof ${name}Schema>\n")
+    }
+
+    override fun resolveZodType(
+        prop: KSPropertyDeclaration,
+        config: GeneratorConfig,
+    ): Pair<String, List<Import>> {
         val customZodType = prop.annotations.firstOrNull {
             it.shortName.asString() == "ZodType"
         }?.arguments?.firstOrNull()?.value as? String
@@ -82,9 +90,9 @@ class TypescriptGenerator(
         return resolveZodType(prop.type.resolve(), config)
     }
 
-    private fun resolveZodType(type: KSType, config: GeneratorConfig): Pair<String, List<String>> {
+    private fun resolveZodType(type: KSType, config: GeneratorConfig): Pair<String, List<Import>> {
         val isNullable = type.isMarkedNullable
-        val imports = mutableListOf<String>()
+        val imports = mutableListOf<Import>()
         val zodType = when (type.declaration.qualifiedName?.asString()) {
             "kotlin.String" -> "z.string()"
             "kotlin.Int" -> "z.number().int()"
@@ -119,8 +127,9 @@ class TypescriptGenerator(
             else -> {
                 val classDeclaration = type.declaration as? KSClassDeclaration
                 if (classDeclaration != null && classDeclaration.annotations.any { it.shortName.asString() == "Zodable" }) {
-                    imports += classDeclaration.packageName.asString()
+                    val import = classDeclaration.packageName.asString()
                         .replace(".", "/") + "/" + classDeclaration.simpleName.asString()
+                    imports += Import(import.split("/").last(), import)
                     "${classDeclaration.simpleName.asString()}Schema"
                 } else {
                     env.logger.warn("Unsupported type ${type.declaration.simpleName}, using z.unknown()")
