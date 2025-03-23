@@ -1,5 +1,6 @@
 plugins {
     kotlin("jvm")
+    id("org.jetbrains.kotlinx.kover")
     id("com.google.devtools.ksp")
     id("com.vanniktech.maven.publish")
 }
