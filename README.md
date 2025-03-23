@@ -40,3 +40,16 @@ export type User = z.infer<typeof UserSchema>
 ```
 
 Generated schemas can be found in `build/zodable`. It is a ready to use npm package.
+
+## Configuration options
+
+You can configure a few things in your `build.gradle.kts`:
+
+```kotlin
+zodable {
+    inferTypes = true // Generate `export type X = z.infer<typeof XSchema>`, default is true
+    optionals = digital.guimauve.zodable.Optionals.NULLISH // How to handle optional fields, default is NULLISH
+    packageName = "my-package" // npm package name, default is the gradle project name
+    packageVersion = "1.0.0" // npm package version, default is the gradle project version
+}
+```

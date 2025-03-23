@@ -72,4 +72,11 @@ kotlin {
     }
 
     applyDefaultHierarchyTemplate()
+    sourceSets {
+        val commonMain by getting {
+            dependencies {
+                implementation("dev.kaccelero:core:0.4.5")
+            }
+        }
+    }
 }
