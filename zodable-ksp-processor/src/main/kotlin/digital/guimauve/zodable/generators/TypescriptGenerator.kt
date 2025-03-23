@@ -1,5 +1,6 @@
 package digital.guimauve.zodable.generators
 
+import com.google.devtools.ksp.symbol.ClassKind
 import com.google.devtools.ksp.symbol.KSClassDeclaration
 import com.google.devtools.ksp.symbol.KSPropertyDeclaration
 import com.google.devtools.ksp.symbol.KSType
@@ -19,16 +20,24 @@ class TypescriptGenerator : ZodableGenerator {
                 src.resolve(packageName).mkdirs()
                 val file = src.resolve("$packageName/$className.ts").outputStream()
                 OutputStreamWriter(file, Charsets.UTF_8).use { schemaWriter ->
-                    val propertiesToInclude = classDeclaration.getAllProperties().filter { it.hasBackingField }
                     val imports = mutableSetOf<String>()
-                    val properties = propertiesToInclude.joinToString(",\n  ") { prop ->
-                        val name = prop.simpleName.asString()
-                        val (type, localImports) = resolveZodType(prop, config)
-                        imports.addAll(localImports)
-                        "$name: $type"
-                    }
-                    schemaWriter.write("import {z} from 'zod'\n")
+                    var properties = ""
 
+                    if (classDeclaration.classKind == ClassKind.ENUM_CLASS) {
+                        properties = classDeclaration.declarations.filterIsInstance<KSClassDeclaration>()
+                            .map { it.simpleName.asString() }
+                            .joinToString(", ") { "\"$it\"" }
+                    } else {
+                        val propertiesToInclude = classDeclaration.getAllProperties().filter { it.hasBackingField }
+                        properties = propertiesToInclude.joinToString(",\n  ") { prop ->
+                            val name = prop.simpleName.asString()
+                            val (type, localImports) = resolveZodType(prop, config)
+                            imports.addAll(localImports)
+                            "$name: $type"
+                        }
+                    }
+
+                    schemaWriter.write("import {z} from 'zod'\n")
                     imports.forEach { import ->
                         val importName = import.split("/").last()
                         schemaWriter.write("import {${importName}Schema} from 'src/$import'\n")
@@ -43,7 +52,12 @@ class TypescriptGenerator : ZodableGenerator {
                         }
                     }
 
-                    schemaWriter.write("\nexport const ${className}Schema = z.object({\n  $properties\n})\n")
+                    schemaWriter.write("\nexport const ${className}Schema = ")
+                    if (classDeclaration.classKind == ClassKind.ENUM_CLASS) {
+                        schemaWriter.write("z.enum([\n  $properties\n])\n")
+                    } else {
+                        schemaWriter.write("z.object({\n  $properties\n})\n")
+                    }
                     if (config.inferTypes) schemaWriter.write("export type $className = z.infer<typeof ${className}Schema>\n")
                 }
                 writer.write("export * from 'src/$packageName/$className'\n")
@@ -89,9 +103,12 @@ class TypescriptGenerator : ZodableGenerator {
                 if (keyType != null && valueType != null) {
                     val (keyType, keyImports) = resolveZodType(keyType, config)
                     val (valueType, valueImports) = resolveZodType(valueType, config)
+                    val coercedKeyType =
+                        if (config.coerceMapKeys && keyType.startsWith("z.")) keyType.replaceFirst("z.", "z.coerce.")
+                        else keyType
                     imports.addAll(keyImports)
                     imports.addAll(valueImports)
-                    "z.record($keyType, $valueType)"
+                    "z.record($coercedKeyType, $valueType)"
                 } else "z.record(z.string(), z.unknown())"
             }
 

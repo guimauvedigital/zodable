@@ -6,4 +6,5 @@ import digital.guimauve.zodable.Zodable
 data class Address(
     val street: String,
     val city: String,
+    val country: Country,
 )

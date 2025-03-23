@@ -15,6 +15,7 @@ class ZodSchemaProcessor(
 
     val outputPath = env.options["zodableOutputPath"] ?: ""
     val inferTypes = env.options["zodableInferTypes"].equals("true")
+    val coerceMapKeys = env.options["zodableCoerceMapKeys"].equals("true")
     val optionals = env.options["zodableOptionals"] ?: ""
 
     override fun process(resolver: Resolver): List<KSAnnotated> {
@@ -22,7 +23,7 @@ class ZodSchemaProcessor(
             .filterIsInstance<KSClassDeclaration>()
 
         val outputPath = Paths.get(outputPath).toFile().also { it.mkdirs() }
-        val config = GeneratorConfig(outputPath, inferTypes, optionals)
+        val config = GeneratorConfig(outputPath, inferTypes, coerceMapKeys, optionals)
 
         TypescriptGenerator().generateFiles(annotatedClasses, config)
 

@@ -13,7 +13,7 @@ import java.io.File
 
 abstract class ZodablePlugin : Plugin<Project> {
 
-    private val zodableVersion = "1.0.1"
+    private val zodableVersion = "1.1.0"
 
     override fun apply(project: Project) {
         val outputPath = project.file("build/zodable")
@@ -29,6 +29,7 @@ abstract class ZodablePlugin : Plugin<Project> {
     private fun Project.configureExtensions() {
         val extension = extensions.create<ZodableExtension>("zodable")
         extension.inferTypes.convention(true)
+        extension.coerceMapKeys.convention(true)
         extension.optionals.convention(Optionals.NULLISH)
         extension.packageName.convention(project.name)
         extension.packageVersion.convention(project.version.toString())
@@ -64,6 +65,7 @@ abstract class ZodablePlugin : Plugin<Project> {
             extensions.getByType<KspExtension>().apply {
                 arg("zodableOutputPath", outputPath.absolutePath)
                 arg("zodableInferTypes", extension.inferTypes.get().toString())
+                arg("zodableCoerceMapKeys", extension.coerceMapKeys.get().toString())
                 arg("zodableOptionals", extension.optionals.get().zodType)
             }
         }
