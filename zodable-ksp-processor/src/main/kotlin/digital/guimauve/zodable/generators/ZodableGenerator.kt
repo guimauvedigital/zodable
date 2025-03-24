@@ -29,31 +29,36 @@ abstract class ZodableGenerator(
 
                 OutputStreamWriter(classFile, Charsets.UTF_8).use { schemaWriter ->
                     val imports = generateImports(classDeclaration).toMutableSet()
-                    val properties = classDeclaration.getAllProperties()
-                        .filter { it.hasBackingField }
-                        .map { prop ->
-                            val name = prop.simpleName.asString()
-                            val (type, localImports) = resolveZodType(prop)
-                            imports.addAll(localImports)
-                            name to type
+
+                    val generatedBody = when (classDeclaration.classKind) {
+                        ClassKind.ENUM_CLASS -> {
+                            val values = classDeclaration.declarations.filterIsInstance<KSClassDeclaration>()
+                                .map { it.simpleName.asString() }
+                                .toSet()
+                            generateEnumSchema(name, values)
                         }
-                        .toSet()
 
-                    generateImports(imports, schemaWriter)
-                    schemaWriter.write("\n")
-
-                    if (classDeclaration.classKind == ClassKind.ENUM_CLASS) {
-                        val values = classDeclaration.declarations.filterIsInstance<KSClassDeclaration>()
-                            .map { it.simpleName.asString() }
-                            .toSet()
-                        generateEnumSchema(name, values, schemaWriter)
-                    } else {
-                        generateClassSchema(name, properties, schemaWriter)
+                        else -> {
+                            val properties = classDeclaration.getAllProperties()
+                                .filter { it.hasBackingField }
+                                .map { prop ->
+                                    val name = prop.simpleName.asString()
+                                    val (type, localImports) = resolveZodType(prop)
+                                    imports.addAll(localImports)
+                                    name to type
+                                }
+                                .toSet()
+                            generateClassSchema(name, properties)
+                        }
                     }
+                    val generatedImports = generateImports(imports) + "\n"
+
+                    schemaWriter.write(generatedImports + "\n")
+                    schemaWriter.write(generatedBody + "\n")
 
                     importedPackages.addAll(imports.filter { it.isExternal }.map { it.source })
                 }
-                generateIndexExport(name, packageName, writer)
+                writer.write(generateIndexExport(name, packageName) + "\n")
             }
         }
 
@@ -116,10 +121,10 @@ abstract class ZodableGenerator(
     abstract fun resolveDependenciesFile(): File
     abstract fun resolveIndexFile(sourceFolder: File): File
     abstract fun resolveClassFile(sourceFolder: File, packageName: String, name: String): File
-    abstract fun generateImports(imports: Set<Import>, writer: OutputStreamWriter)
-    abstract fun generateIndexExport(name: String, packageName: String, writer: OutputStreamWriter)
-    abstract fun generateClassSchema(name: String, properties: Set<Pair<String, String>>, writer: OutputStreamWriter)
-    abstract fun generateEnumSchema(name: String, values: Set<String>, writer: OutputStreamWriter)
+    abstract fun generateImports(imports: Set<Import>): String
+    abstract fun generateIndexExport(name: String, packageName: String): String
+    abstract fun generateClassSchema(name: String, properties: Set<Pair<String, String>>): String
+    abstract fun generateEnumSchema(name: String, values: Set<String>): String
     abstract fun resolvePrimitiveType(kotlinType: String): String?
     abstract fun resolveZodableType(name: String): String
     abstract fun resolveUnknownType(): String

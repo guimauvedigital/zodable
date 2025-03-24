@@ -4,7 +4,6 @@ import com.google.devtools.ksp.processing.SymbolProcessorEnvironment
 import digital.guimauve.zodable.config.GeneratorConfig
 import digital.guimauve.zodable.config.Import
 import java.io.File
-import java.io.OutputStreamWriter
 
 class TypescriptGenerator(
     env: SymbolProcessorEnvironment,
@@ -27,31 +26,28 @@ class TypescriptGenerator(
         return sourceFolder.resolve("$packageName/$name.ts")
     }
 
-    override fun generateImports(imports: Set<Import>, writer: OutputStreamWriter) {
-        writer.write("import {z} from 'zod'\n")
-        imports.forEach { (importName, import, isEternal) ->
-            writer.write("import {${importName}Schema} from '${if (!isEternal) "src/" else ""}$import'\n")
-        }
+    override fun generateImports(imports: Set<Import>): String {
+        return (listOf("import {z} from \"zod\"") + imports.map { (importName, import, isEternal) ->
+            "import {${importName}Schema} from \"${if (!isEternal) "src/" else ""}$import\""
+        }).joinToString("\n")
     }
 
-    override fun generateIndexExport(name: String, packageName: String, writer: OutputStreamWriter) {
-        writer.write("export * from 'src/$packageName/$name'\n")
+    override fun generateIndexExport(name: String, packageName: String): String {
+        return "export * from \"src/$packageName/$name\""
     }
 
-    override fun generateClassSchema(name: String, properties: Set<Pair<String, String>>, writer: OutputStreamWriter) {
-        val body = properties.joinToString(",\n  ") { (name, type) -> "$name: $type" }
-        writer.write("export const ${name}Schema = z.object({\n  $body\n})\n")
-        generateInferType(name, writer)
+    override fun generateClassSchema(name: String, properties: Set<Pair<String, String>>): String {
+        val body = properties.joinToString(",\n    ") { (name, type) -> "$name: $type" }
+        return "export const ${name}Schema = z.object({\n    $body\n})" + generateInferType(name)
     }
 
-    override fun generateEnumSchema(name: String, values: Set<String>, writer: OutputStreamWriter) {
+    override fun generateEnumSchema(name: String, values: Set<String>): String {
         val body = values.joinToString(", ") { "\"$it\"" }
-        writer.write("export const ${name}Schema = z.enum([\n  $body\n])\n")
-        generateInferType(name, writer)
+        return "export const ${name}Schema = z.enum([\n    $body\n])" + generateInferType(name)
     }
 
-    fun generateInferType(name: String, writer: OutputStreamWriter) {
-        if (config.inferTypes) writer.write("export type $name = z.infer<typeof ${name}Schema>\n")
+    fun generateInferType(name: String): String {
+        return if (config.inferTypes) "\nexport type $name = z.infer<typeof ${name}Schema>" else ""
     }
 
     override fun resolvePrimitiveType(kotlinType: String): String? {
@@ -77,28 +73,26 @@ class TypescriptGenerator(
     }
 
     override fun addGenericArguments(type: String, arguments: List<String>): String {
-        return if (type.endsWith("()")) {
-            // Coerce arguments if needed
-            val coercedArguments = when (type) {
-                // For map, we need to coerce the key type (always from string inside json)
-                "z.record()" -> {
-                    val firstArgument = arguments.first()
-                    val coercedFirstArgument =
-                        if (config.coerceMapKeys && firstArgument.startsWith("z."))
-                            firstArgument.replaceFirst("z.", "z.coerce.")
-                        else firstArgument
-                    listOf(coercedFirstArgument) + arguments.drop(1)
-                }
+        if (!type.endsWith("()")) return type
 
-                else -> arguments
+        // Coerce arguments if needed
+        val coercedArguments = when (type) {
+            // For map, we need to coerce the key type (always from string inside json)
+            "z.record()" -> {
+                val firstArgument = arguments.first()
+                val coercedFirstArgument =
+                    if (config.coerceMapKeys && firstArgument.startsWith("z."))
+                        firstArgument.replaceFirst("z.", "z.coerce.")
+                    else firstArgument
+                listOf(coercedFirstArgument) + arguments.drop(1)
             }
-            type.substring(0, type.length - 2) + "(${coercedArguments.joinToString(", ")})"
-        } else type
+
+            else -> arguments
+        }
+        return type.substring(0, type.length - 2) + "(${coercedArguments.joinToString(", ")})"
     }
 
-    override fun markAsNullable(
-        type: String,
-    ): String {
+    override fun markAsNullable(type: String): String {
         return "$type${config.optionals}"
     }
 
