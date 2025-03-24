@@ -2,4 +2,8 @@ package digital.guimauve.zodable
 
 @Target(AnnotationTarget.PROPERTY)
 @Retention(AnnotationRetention.RUNTIME)
-annotation class ZodType(val value: String)
+@Repeatable
+annotation class ZodType(
+    val value: String,
+    val filter: String = "*",
+)

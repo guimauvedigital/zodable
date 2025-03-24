@@ -71,15 +71,21 @@ abstract class ZodableGenerator(
     private fun generateImports(classDeclaration: KSClassDeclaration): Set<Import> =
         classDeclaration.annotations.mapNotNull { annotation ->
             if (annotation.shortName.asString() != "ZodImport") return@mapNotNull null
-            val externalName = annotation.arguments.firstOrNull()?.value as? String ?: return@mapNotNull null
-            val externalPackageName = annotation.arguments.lastOrNull()?.value as? String ?: return@mapNotNull null
-            return@mapNotNull Import(externalName, externalPackageName, true)
+            val externalName = annotation.arguments.getOrNull(0)?.value as? String ?: return@mapNotNull null
+            val externalPackageName = annotation.arguments.getOrNull(1)?.value as? String ?: return@mapNotNull null
+            val filter = annotation.arguments.getOrNull(2)?.value as? String
+            if (filter != null && !shouldKeepAnnotation("ZodImport", filter)) return@mapNotNull null
+            Import(externalName, externalPackageName, true)
         }.toSet()
 
     private fun resolveZodType(prop: KSPropertyDeclaration): Pair<String, List<Import>> {
-        val customZodType = prop.annotations.firstOrNull {
-            it.shortName.asString() == "ZodType"
-        }?.arguments?.firstOrNull()?.value as? String
+        val customZodType = prop.annotations.firstNotNullOfOrNull { annotation ->
+            if (annotation.shortName.asString() != "ZodType") return@firstNotNullOfOrNull null
+            val type = annotation.arguments.getOrNull(0)?.value as? String ?: return@firstNotNullOfOrNull null
+            val filter = annotation.arguments.getOrNull(1)?.value as? String
+            if (filter != null && !shouldKeepAnnotation("ZodType", filter)) return@firstNotNullOfOrNull null
+            type
+        }
         if (customZodType != null) return Pair(customZodType, emptyList())
         return resolveZodType(prop.type.resolve())
     }
@@ -117,6 +123,7 @@ abstract class ZodableGenerator(
         )
     }
 
+    abstract fun shouldKeepAnnotation(annotation: String, filter: String): Boolean
     abstract fun resolveSourceFolder(): File
     abstract fun resolveDependenciesFile(): File
     abstract fun resolveIndexFile(sourceFolder: File): File

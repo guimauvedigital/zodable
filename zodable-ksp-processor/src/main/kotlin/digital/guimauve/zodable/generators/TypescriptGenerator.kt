@@ -10,6 +10,10 @@ class TypescriptGenerator(
     config: GeneratorConfig,
 ) : ZodableGenerator(env, config) {
 
+    override fun shouldKeepAnnotation(annotation: String, filter: String): Boolean {
+        return listOf("*", "zod", "ts", "typescript").contains(filter)
+    }
+
     override fun resolveSourceFolder(): File {
         return config.outputPath.resolve("src")
     }
