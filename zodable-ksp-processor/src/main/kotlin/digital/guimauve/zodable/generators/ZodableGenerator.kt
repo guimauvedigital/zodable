@@ -23,11 +23,10 @@ abstract class ZodableGenerator(
             for (classDeclaration in annotatedClasses) {
                 val name = classDeclaration.simpleName.asString()
                 val packageName = classDeclaration.packageName.asString().replace(".", "/")
-                val classFile = resolveClassFile(sourceFolder, packageName, name).also {
-                    it.parentFile.mkdirs()
-                }.outputStream()
+                val classFile = resolveClassFile(sourceFolder, packageName, name)
+                classFile.parentFile.mkdirs()
 
-                OutputStreamWriter(classFile, Charsets.UTF_8).use { schemaWriter ->
+                OutputStreamWriter(classFile.outputStream(), Charsets.UTF_8).use { schemaWriter ->
                     val imports = generateImports(classDeclaration).toMutableSet()
 
                     val generatedBody = when (classDeclaration.classKind) {
@@ -44,14 +43,16 @@ abstract class ZodableGenerator(
                                 .map { prop ->
                                     val name = prop.simpleName.asString()
                                     val (type, localImports) = resolveZodType(prop)
-                                    imports.addAll(localImports)
+                                    localImports.forEach { import ->
+                                        if (imports.none { it.name == import.name }) imports.add(import)
+                                    }
                                     name to type
                                 }
                                 .toSet()
                             generateClassSchema(name, properties)
                         }
                     }
-                    val generatedImports = generateImports(imports) + "\n"
+                    val generatedImports = generateImports(sourceFolder, classFile, imports) + "\n"
 
                     schemaWriter.write(generatedImports + "\n")
                     schemaWriter.write(generatedBody + "\n")
@@ -128,7 +129,7 @@ abstract class ZodableGenerator(
     abstract fun resolveDependenciesFile(): File
     abstract fun resolveIndexFile(sourceFolder: File): File
     abstract fun resolveClassFile(sourceFolder: File, packageName: String, name: String): File
-    abstract fun generateImports(imports: Set<Import>): String
+    abstract fun generateImports(sourceFolder: File, currentFile: File, imports: Set<Import>): String
     abstract fun generateIndexExport(name: String, packageName: String): String
     abstract fun generateClassSchema(name: String, properties: Set<Pair<String, String>>): String
     abstract fun generateEnumSchema(name: String, values: Set<String>): String

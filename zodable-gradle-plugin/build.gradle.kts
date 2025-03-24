@@ -17,7 +17,7 @@ kotlin {
 }
 
 group = "digital.guimauve.zodable"
-version = "1.1.0"
+version = "1.1.1"
 
 gradlePlugin {
     website = "https://github.com/guimauvedigital/zodable"

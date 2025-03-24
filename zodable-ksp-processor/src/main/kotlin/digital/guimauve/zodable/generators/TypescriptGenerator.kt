@@ -30,14 +30,19 @@ class TypescriptGenerator(
         return sourceFolder.resolve("$packageName/$name.ts")
     }
 
-    override fun generateImports(imports: Set<Import>): String {
-        return (listOf("import {z} from \"zod\"") + imports.map { (importName, import, isEternal) ->
-            "import {${importName}Schema} from \"${if (!isEternal) "src/" else ""}$import\""
+    override fun generateImports(sourceFolder: File, currentFile: File, imports: Set<Import>): String {
+        return (listOf("import {z} from \"zod\"") + imports.map { import ->
+            val source =
+                if (import.isExternal) import.source
+                else sourceFolder.resolve(import.source)
+                    .relativeTo(currentFile.parentFile) // Folder containing current file
+                    .path.let { if (!it.startsWith(".")) "./$it" else it }
+            "import {${import.name}Schema} from \"$source\""
         }).joinToString("\n")
     }
 
     override fun generateIndexExport(name: String, packageName: String): String {
-        return "export * from \"src/$packageName/$name\""
+        return "export * from \"./$packageName/$name\""
     }
 
     override fun generateClassSchema(name: String, properties: Set<Pair<String, String>>): String {

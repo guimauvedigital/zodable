@@ -13,7 +13,7 @@ import java.io.File
 
 abstract class ZodablePlugin : Plugin<Project> {
 
-    private val zodableVersion = "1.1.0"
+    private val zodableVersion = "1.1.1"
 
     override fun apply(project: Project) {
         val outputPath = project.file("build/zodable")

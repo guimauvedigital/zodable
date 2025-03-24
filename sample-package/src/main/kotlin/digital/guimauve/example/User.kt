@@ -6,7 +6,8 @@ import digital.guimauve.zodable.ZodType
 import digital.guimauve.zodable.Zodable
 import kotlinx.datetime.Instant
 
-@ZodImport("Id", "idschema")
+@ZodImport("Id", "zodable-idschema")
+@ZodImport("MultiplatformUser", "zodable-sample-package-multiplatform")
 @Zodable
 data class User(
     val id: UUID,
@@ -19,6 +20,7 @@ data class User(
     val eventsByYear: Map<Int, List<String>>, // Map of primitive types, with non-string key
     val contactGroups: Map<String, List<Address>>, // Nested generics
     val createdAt: Instant,
+    val externalUser: MultiplatformUser,
     @ZodType("z.date()") val birthDate: String, // Custom mapping
     @ZodType("IdSchema") val otherId: UUID,
 ) {

@@ -54,3 +54,7 @@ kotlin {
         }
     }
 }
+
+zodable {
+    packageName = "zodable-sample-package-multiplatform"
+}
