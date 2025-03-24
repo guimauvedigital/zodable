@@ -26,7 +26,7 @@ class ZodSchemaProcessor(
         val outputPath = Paths.get(outputPath).toFile().also { it.mkdirs() }
         val config = GeneratorConfig(packageName, outputPath, inferTypes, coerceMapKeys, optionals)
 
-        TypescriptGenerator(env).generateFiles(annotatedClasses, config)
+        TypescriptGenerator(env, config).generateFiles(annotatedClasses)
 
         return emptyList()
     }
