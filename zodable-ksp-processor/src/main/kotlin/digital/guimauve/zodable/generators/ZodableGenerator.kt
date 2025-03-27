@@ -40,9 +40,9 @@ abstract class ZodableGenerator(
                         else -> {
                             val properties = classDeclaration.getAllProperties()
                                 .filter { it.hasBackingField }
-                                .map { prop ->
+                                .mapNotNull { prop ->
                                     val name = prop.simpleName.asString()
-                                    val (type, localImports) = resolveZodType(prop)
+                                    val (type, localImports) = resolveZodType(prop) ?: return@mapNotNull null
                                     localImports.forEach { import ->
                                         if (imports.none { it.name == import.name }) imports.add(import)
                                     }
@@ -79,7 +79,13 @@ abstract class ZodableGenerator(
             Import(externalName, externalPackageName, true)
         }.toSet()
 
-    private fun resolveZodType(prop: KSPropertyDeclaration): Pair<String, List<Import>> {
+    private fun resolveZodType(prop: KSPropertyDeclaration): Pair<String, List<Import>>? {
+        prop.annotations.forEach { annotation ->
+            if (annotation.shortName.asString() != "ZodIgnore") return@forEach
+            val filter = annotation.arguments.getOrNull(0)?.value as? String
+            if (filter != null && !shouldKeepAnnotation("ZodIgnore", filter)) return@forEach
+            return@resolveZodType null
+        }
         val customZodType = prop.annotations.firstNotNullOfOrNull { annotation ->
             if (annotation.shortName.asString() != "ZodType") return@firstNotNullOfOrNull null
             val type = annotation.arguments.getOrNull(0)?.value as? String ?: return@firstNotNullOfOrNull null

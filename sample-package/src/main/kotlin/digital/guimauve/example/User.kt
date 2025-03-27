@@ -1,6 +1,7 @@
 package digital.guimauve.example
 
 import dev.kaccelero.models.UUID
+import digital.guimauve.zodable.ZodIgnore
 import digital.guimauve.zodable.ZodImport
 import digital.guimauve.zodable.ZodType
 import digital.guimauve.zodable.Zodable
@@ -23,6 +24,7 @@ data class User(
     val externalUser: MultiplatformUser,
     @ZodType("z.date()") val birthDate: String, // Custom mapping
     @ZodType("IdSchema") val otherId: UUID,
+    @ZodIgnore val ignored: String, // Ignored property
 ) {
 
     val notIncluded: Boolean
