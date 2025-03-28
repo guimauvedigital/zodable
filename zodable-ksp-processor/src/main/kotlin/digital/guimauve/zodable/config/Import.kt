@@ -4,4 +4,5 @@ data class Import(
     val name: String,
     val source: String,
     val isExternal: Boolean = false,
+    val isInvariable: Boolean = false,
 )

@@ -59,26 +59,26 @@ class TypescriptGenerator(
         return if (config.inferTypes) "\nexport type $name = z.infer<typeof ${name}Schema>" else ""
     }
 
-    override fun resolvePrimitiveType(kotlinType: String): String? {
+    override fun resolvePrimitiveType(kotlinType: String): Pair<String, List<Import>>? {
         return when (kotlinType) {
-            "kotlin.String" -> "z.string()"
-            "kotlin.Int" -> "z.number().int()"
-            "kotlin.Long", "kotlin.Double", "kotlin.Float" -> "z.number()"
-            "kotlin.Boolean" -> "z.boolean()"
-            "kotlinx.datetime.Instant" -> "z.coerce.date()"
-            "dev.kaccelero.models.UUID" -> "z.string().uuid()"
-            "kotlin.collections.List" -> "z.array()"
-            "kotlin.collections.Map" -> "z.record()"
+            "kotlin.String" -> "z.string()" to emptyList()
+            "kotlin.Int" -> "z.number().int()" to emptyList()
+            "kotlin.Long", "kotlin.Double", "kotlin.Float" -> "z.number()" to emptyList()
+            "kotlin.Boolean" -> "z.boolean()" to emptyList()
+            "kotlinx.datetime.Instant" -> "z.coerce.date()" to emptyList()
+            "dev.kaccelero.models.UUID" -> "z.string().uuid()" to emptyList()
+            "kotlin.collections.List" -> "z.array()" to emptyList()
+            "kotlin.collections.Map" -> "z.record()" to emptyList()
             else -> null
         }
     }
 
-    override fun resolveZodableType(name: String): String {
-        return "${name}Schema"
+    override fun resolveZodableType(name: String): Pair<String, List<Import>> {
+        return "${name}Schema" to emptyList()
     }
 
-    override fun resolveUnknownType(): String {
-        return "z.unknown()"
+    override fun resolveUnknownType(): Pair<String, List<Import>> {
+        return "z.unknown()" to emptyList()
     }
 
     override fun addGenericArguments(type: String, arguments: List<String>): String {

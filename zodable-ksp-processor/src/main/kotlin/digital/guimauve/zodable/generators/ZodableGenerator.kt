@@ -101,14 +101,14 @@ abstract class ZodableGenerator(
         val isNullable = type.isMarkedNullable
         val imports = mutableListOf<Import>()
 
-        val arguments = type.arguments.map {
+        val (arguments, argumentImports) = type.arguments.map {
             val argument = it.type?.resolve() ?: return@map resolveUnknownType()
-            val (argumentType, argumentImports) = resolveZodType(argument)
-            imports.addAll(argumentImports)
-            argumentType
-        }
+            return resolveZodType(argument)
+        }.unzip().let { it.first to it.second.flatten() }
 
-        val resolvedType = resolvePrimitiveType(type.declaration.qualifiedName?.asString() ?: "kotlin.Any") ?: {
+        val (resolvedType, resolvedImports) = resolvePrimitiveType(
+            type.declaration.qualifiedName?.asString() ?: "kotlin.Any"
+        ) ?: {
             val classDeclaration = type.declaration as? KSClassDeclaration
             if (classDeclaration != null && classDeclaration.annotations.any { it.shortName.asString() == "Zodable" }) {
                 val import = classDeclaration.packageName.asString()
@@ -126,7 +126,7 @@ abstract class ZodableGenerator(
             resolvedType
                 .let { if (arguments.isNotEmpty()) addGenericArguments(it, arguments) else it }
                 .let { if (isNullable) markAsNullable(it) else it },
-            imports
+            imports + argumentImports + resolvedImports
         )
     }
 
@@ -139,9 +139,9 @@ abstract class ZodableGenerator(
     abstract fun generateIndexExport(name: String, packageName: String): String
     abstract fun generateClassSchema(name: String, properties: Set<Pair<String, String>>): String
     abstract fun generateEnumSchema(name: String, values: Set<String>): String
-    abstract fun resolvePrimitiveType(kotlinType: String): String?
-    abstract fun resolveZodableType(name: String): String
-    abstract fun resolveUnknownType(): String
+    abstract fun resolvePrimitiveType(kotlinType: String): Pair<String, List<Import>>?
+    abstract fun resolveZodableType(name: String): Pair<String, List<Import>>
+    abstract fun resolveUnknownType(): Pair<String, List<Import>>
     abstract fun addGenericArguments(type: String, arguments: List<String>): String
     abstract fun markAsNullable(type: String): String
 
