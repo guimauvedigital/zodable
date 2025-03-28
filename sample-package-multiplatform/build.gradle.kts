@@ -57,4 +57,5 @@ kotlin {
 
 zodable {
     packageName = "zodable-sample-package-multiplatform"
+    enablePython = true // Default is false
 }

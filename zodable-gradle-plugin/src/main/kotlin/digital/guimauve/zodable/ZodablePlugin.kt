@@ -20,14 +20,17 @@ abstract class ZodablePlugin : Plugin<Project> {
 
         project.pluginManager.apply("com.google.devtools.ksp")
         project.configureExtensions()
-        project.configureKspProcessor(outputPath)
+        project.configureKspProcessor()
         project.afterEvaluate {
+            project.configureKspArgs(outputPath)
             project.configureTasks(outputPath)
         }
     }
 
     private fun Project.configureExtensions() {
         val extension = extensions.create<ZodableExtension>("zodable")
+        extension.enableTypescript.convention(true)
+        extension.enablePython.convention(false)
         extension.inferTypes.convention(true)
         extension.coerceMapKeys.convention(true)
         extension.optionals.convention(Optionals.NULLISH)
@@ -47,8 +50,7 @@ abstract class ZodablePlugin : Plugin<Project> {
         )
     }
 
-    private fun Project.configureKspProcessor(outputPath: File) {
-        val extension = extensions.getByType<ZodableExtension>()
+    private fun Project.configureKspProcessor() {
         val kspConfig = getKspConfig()
 
         dependencies {
@@ -60,9 +62,15 @@ abstract class ZodablePlugin : Plugin<Project> {
                 add(kspConfig.kspConfigurationName, "digital.guimauve.zodable:zodable-ksp-processor:$zodableVersion")
             }
         }
+    }
+
+    private fun Project.configureKspArgs(outputPath: File) {
+        val extension = extensions.getByType<ZodableExtension>()
 
         plugins.withId("com.google.devtools.ksp") {
             extensions.getByType<KspExtension>().apply {
+                arg("zodableEnableTypescript", extension.enableTypescript.get().toString())
+                arg("zodableEnablePython", extension.enablePython.get().toString())
                 arg("zodablePackageName", extension.packageName.get())
                 arg("zodableOutputPath", outputPath.absolutePath)
                 arg("zodableInferTypes", extension.inferTypes.get().toString())
@@ -107,8 +115,46 @@ abstract class ZodablePlugin : Plugin<Project> {
                 }
             }
         }
+        val setupPydantablePackage = tasks.register<Exec>("setupPydantablePackage") {
+            val pythonOutputPath = outputPath.parentFile.resolve("pydantable")
+            val venvPath = pythonOutputPath.resolve(".venv")
+            val pythonExec = venvPath.resolve("bin/python").absolutePath
+            val pipExec = venvPath.resolve("bin/pip").absolutePath
+
+            group = "build"
+            description = "Setup zodable pypi package"
+
+            workingDir = pythonOutputPath
+            commandLine = listOf("python3", "-m", "venv", ".venv")
+
+            dependsOn(kspConfig.taskName)
+            doLast {
+                listOf(
+                    ExecCommand(listOf(pipExec, "install", "pydantic")),
+                    ExecCommand(listOf(pipExec, "install", "-r", "requirements.txt")),
+                    ExecCommand(listOf(pipExec, "install", "toml")),
+                    ExecCommand(
+                        listOf(
+                            pythonExec, "-c", Files.generatePyProjectToml(
+                                extension.packageName.get(),
+                                extension.packageVersion.get(),
+                                pipExec
+                            )
+                        )
+                    ),
+                    ExecCommand(listOf(pipExec, "install", "build", "twine")),
+                    ExecCommand(listOf(pythonExec, "-m", "build")),
+                ).forEach { command ->
+                    exec {
+                        workingDir = pythonOutputPath
+                        commandLine = command.commandLine
+                    }
+                }
+            }
+        }
         tasks.named("build").configure {
-            dependsOn(setupZodablePackage)
+            if (extension.enableTypescript.get()) dependsOn(setupZodablePackage)
+            if (extension.enablePython.get()) dependsOn(setupPydantablePackage)
         }
     }
 

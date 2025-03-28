@@ -22,7 +22,7 @@ data class User(
     val contactGroups: Map<String, List<Address>>, // Nested generics
     val createdAt: Instant,
     val externalUser: MultiplatformUser,
-    @ZodType("z.date()") val birthDate: String, // Custom mapping
+    @ZodType("z.date()", "ts") @ZodType("datetime", "py") val birthDate: String, // Custom mapping
     @ZodType("IdSchema") val otherId: UUID,
     @ZodIgnore val ignored: String, // Ignored property
 ) {
