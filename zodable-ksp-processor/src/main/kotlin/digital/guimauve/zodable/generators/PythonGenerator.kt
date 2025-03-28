@@ -33,7 +33,10 @@ class PythonGenerator(
     }
 
     override fun generateImports(sourceFolder: File, currentFile: File, imports: Set<Import>): String {
-        return (listOf("from pydantic import BaseModel, Enum") + imports.map { import ->
+        return (listOf(
+            "from pydantic import BaseModel",
+            "from enum import Enum",
+        ) + imports.map { import ->
             val source =
                 if (import.isExternal) import.source.pythonCompatible()
                 else sourceFolder.resolve(import.source)
