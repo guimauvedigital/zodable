@@ -117,7 +117,7 @@ abstract class ZodableGenerator(
                 resolveZodableType(classDeclaration.simpleName.asString())
             } else {
                 val unknownType = resolveUnknownType()
-                env.logger.warn("Unsupported type ${type.declaration.simpleName.asString()}, using $unknownType")
+                env.logger.warn("Unsupported type ${type.declaration.simpleName.asString()}, using ${unknownType.first}")
                 unknownType
             }
         }()

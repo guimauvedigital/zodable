@@ -2,6 +2,8 @@ package digital.guimauve.zodable
 
 object Files {
 
+    const val ZOD_DESCRIPTION = "Auto-generated zod project from Kotlin using guimauvedigital/zodable"
+
     fun generatePyProjectToml(
         name: String,
         version: String,
@@ -15,7 +17,7 @@ object Files {
         project = {
             "name": "$name",
             "version": "$version",
-            "description": "Auto-generated Pydantic project",
+            "description": "Auto-generated Pydantic project from Kotlin using guimauvedigital/zodable",
             "dependencies": [],
         }
         

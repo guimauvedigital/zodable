@@ -96,6 +96,7 @@ abstract class ZodablePlugin : Plugin<Project> {
                 listOf(
                     ExecCommand(listOf("npm", "pkg", "set", "name=${extension.packageName.get()}")),
                     ExecCommand(listOf("npm", "pkg", "set", "version=${extension.packageVersion.get()}")),
+                    ExecCommand(listOf("npm", "pkg", "set", "description=${Files.ZOD_DESCRIPTION}")),
                     ExecCommand(listOf("npm", "pkg", "set", "main=src/index.js")),
                     ExecCommand(listOf("npm", "pkg", "set", "types=src/index.d.ts")),
                     ExecCommand(listOf("npm", "pkg", "set", "files[0]=src/**/*")),
