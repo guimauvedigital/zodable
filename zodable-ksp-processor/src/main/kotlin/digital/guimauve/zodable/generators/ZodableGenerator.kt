@@ -57,7 +57,7 @@ abstract class ZodableGenerator(
                     schemaWriter.write(generatedImports + "\n")
                     schemaWriter.write(generatedBody + "\n")
 
-                    importedPackages.addAll(imports.filter { it.isExternal }.map { it.source })
+                    importedPackages.addAll(imports.filter { it.isExternal && it.isDependency }.map { it.source })
                 }
                 writer.write(generateIndexExport(name, packageName) + "\n")
             }
@@ -70,10 +70,11 @@ abstract class ZodableGenerator(
     }
 
     private fun generateImports(classDeclaration: KSClassDeclaration): Set<Import> =
-        classDeclaration.annotations.mapNotNull { annotation ->
+        resolveDefaultImports(classDeclaration.classKind) + classDeclaration.annotations.mapNotNull { annotation ->
             if (annotation.shortName.asString() != "ZodImport") return@mapNotNull null
             val externalName = annotation.arguments.getOrNull(0)?.value as? String ?: return@mapNotNull null
-            val externalPackageName = annotation.arguments.getOrNull(1)?.value as? String ?: return@mapNotNull null
+            val externalPackageName =
+                annotation.arguments.getOrNull(1)?.value as? String ?: return@mapNotNull null
             val filter = annotation.arguments.getOrNull(2)?.value as? String
             if (filter != null && !shouldKeepAnnotation("ZodImport", filter)) return@mapNotNull null
             Import(externalName, externalPackageName, true)
@@ -135,6 +136,7 @@ abstract class ZodableGenerator(
     abstract fun resolveDependenciesFile(): File
     abstract fun resolveIndexFile(sourceFolder: File): File
     abstract fun resolveClassFile(sourceFolder: File, packageName: String, name: String): File
+    abstract fun resolveDefaultImports(classKind: ClassKind): Set<Import>
     abstract fun generateImports(sourceFolder: File, currentFile: File, imports: Set<Import>): String
     abstract fun generateIndexExport(name: String, packageName: String): String
     abstract fun generateClassSchema(name: String, properties: Set<Pair<String, String>>): String

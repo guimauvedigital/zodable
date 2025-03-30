@@ -1,6 +1,7 @@
 package digital.guimauve.zodable.generators
 
 import com.google.devtools.ksp.processing.SymbolProcessorEnvironment
+import com.google.devtools.ksp.symbol.ClassKind
 import digital.guimauve.zodable.config.GeneratorConfig
 import digital.guimauve.zodable.config.Import
 import java.io.File
@@ -30,15 +31,19 @@ class TypescriptGenerator(
         return sourceFolder.resolve("$packageName/$name.ts")
     }
 
+    override fun resolveDefaultImports(classKind: ClassKind): Set<Import> {
+        return setOf(Import("z", "zod", isExternal = true, isInvariable = true))
+    }
+
     override fun generateImports(sourceFolder: File, currentFile: File, imports: Set<Import>): String {
-        return (listOf("import {z} from \"zod\"") + imports.map { import ->
+        return imports.joinToString("\n") { import ->
             val source =
                 if (import.isExternal) import.source
                 else sourceFolder.resolve(import.source)
                     .relativeTo(currentFile.parentFile) // Folder containing current file
                     .path.let { if (!it.startsWith(".")) "./$it" else it }
-            "import {${import.name}Schema} from \"$source\""
-        }).joinToString("\n")
+            "import {${import.name}${if (!import.isInvariable) "Schema" else ""}} from \"$source\""
+        }
     }
 
     override fun generateIndexExport(name: String, packageName: String): String {

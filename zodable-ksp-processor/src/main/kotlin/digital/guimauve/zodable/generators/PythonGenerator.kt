@@ -1,6 +1,7 @@
 package digital.guimauve.zodable.generators
 
 import com.google.devtools.ksp.processing.SymbolProcessorEnvironment
+import com.google.devtools.ksp.symbol.ClassKind
 import digital.guimauve.zodable.config.GeneratorConfig
 import digital.guimauve.zodable.config.Import
 import java.io.File
@@ -32,18 +33,27 @@ class PythonGenerator(
         return sourceFolder.resolve("$packageName/$name.py")
     }
 
+    override fun resolveDefaultImports(classKind: ClassKind): Set<Import> {
+        return when (classKind) {
+            ClassKind.ENUM_CLASS -> setOf(
+                Import("Enum", "enum", isExternal = true, isInvariable = true, isDependency = false)
+            )
+
+            else -> setOf(
+                Import("BaseModel", "pydantic", isExternal = true, isInvariable = true)
+            )
+        }
+    }
+
     override fun generateImports(sourceFolder: File, currentFile: File, imports: Set<Import>): String {
-        return (listOf(
-            "from pydantic import BaseModel",
-            "from enum import Enum",
-        ) + imports.map { import ->
+        return imports.joinToString("\n") { import ->
             val source =
                 if (import.isExternal) import.source.pythonCompatible()
                 else sourceFolder.resolve(import.source)
                     .relativeTo(config.outputPath.resolve("src"))
                     .path.replace("/", ".")
             "from $source import ${import.name}${if (!import.isInvariable) "Schema" else ""}"
-        }).joinToString("\n")
+        }
     }
 
     override fun generateIndexExport(name: String, packageName: String): String {

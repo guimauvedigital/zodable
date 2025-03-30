@@ -101,7 +101,6 @@ abstract class ZodablePlugin : Plugin<Project> {
                     ExecCommand(listOf("npm", "pkg", "set", "types=src/index.d.ts")),
                     ExecCommand(listOf("npm", "pkg", "set", "files[0]=src/**/*")),
                     ExecCommand(listOf("npm", "install", "typescript", "--save-dev")),
-                    ExecCommand(listOf("npm", "install", "zod@latest")),
                     ExecCommand(listOf("xargs", "npm", "install"), "dependencies.txt"),
                     ExecCommand(listOf("npx", "tsc", "--init", "-d", "--baseUrl", "./")),
                     ExecCommand(listOf("npx", "tsc"))
@@ -131,7 +130,6 @@ abstract class ZodablePlugin : Plugin<Project> {
             dependsOn(kspConfig.taskName)
             doLast {
                 listOf(
-                    ExecCommand(listOf(pipExec, "install", "pydantic")),
                     ExecCommand(listOf(pipExec, "install", "-r", "requirements.txt")),
                     ExecCommand(listOf(pipExec, "install", "toml")),
                     ExecCommand(
@@ -139,7 +137,6 @@ abstract class ZodablePlugin : Plugin<Project> {
                             pythonExec, "-c", Files.generatePyProjectToml(
                                 extension.packageName.get(),
                                 extension.packageVersion.get(),
-                                pipExec
                             )
                         )
                     ),

@@ -7,7 +7,6 @@ object Files {
     fun generatePyProjectToml(
         name: String,
         version: String,
-        pipExec: String,
     ): String =
         """
         import sys
@@ -21,8 +20,10 @@ object Files {
             "dependencies": [],
         }
         
-        deps = subprocess.run(["$pipExec", "freeze"], capture_output=True, text=True).stdout.splitlines()
-        project["dependencies"] = [dep.split("==")[0] for dep in deps if "==" in dep]
+        with open("requirements.txt", "r") as f:
+            deps = [line.strip() for line in f if line.strip() and not line.startswith("#")]
+        project["dependencies"] = [dep.replace("==", ">=") for dep in deps]
+
         pyproject = {
             "project": project,
             "build-system": {
