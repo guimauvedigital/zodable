@@ -48,7 +48,7 @@ configuration options below). The generated schema will look like this:
 from pydantic import BaseModel
 
 class User(BaseModel):
-    id: UUID
+    id: int
     name: str
 ```
 
