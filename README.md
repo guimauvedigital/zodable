@@ -41,6 +41,61 @@ export type User = z.infer<typeof UserSchema>
 
 Generated schemas can be found in `build/zodable`. It is a ready to use npm package.
 
+Pydantic schema generation is also available, by setting `enablePython` to `true` in the gradle configuration (see
+configuration options below). The generated schema will look like this:
+
+```python
+from pydantic import BaseModel
+
+class User(BaseModel):
+    id: UUID
+    name: str
+```
+
+## Customizing the generated schema with annotations
+
+You can customize the generated schema with annotations:
+
+### `@ZodIgnore`
+
+You can ignore a field with the `@ZodIgnore` annotation:
+
+```kotlin
+data class User(
+    @ZodIgnore
+    val password: String // Will not be included in the generated schema
+)
+```
+
+### `@ZodImport`
+
+If you are consuming another package/dependency in your schema, you can import it with the `@ZodImport` annotation:
+
+```kotlin
+@ZodImport("Pokemon", "my-pokemon-package") // Will generate import and package dependencies
+
+data class User(
+    val favoritePokemon: Pokemon // Pokemon is defined in another gradle module/package
+)
+```
+
+### `@ZodType`
+
+You can specify the zod type for a field with the `@ZodType` annotation:
+
+```kotlin
+data class User(
+    @ZodType("IdSchema")
+    val id: UUID,
+    @ZodType("z.date()", "ts")
+    @ZodType("datetime", "py")
+    val birthDate: String,
+)
+```
+
+The first argument is the zod type, the second argument is a filter for the target language. If you defined a custom
+schema in another package or are only enabling one language, you can omit the filter.
+
 ## Configuration options
 
 You can configure a few things in your `build.gradle.kts`:
@@ -51,5 +106,7 @@ zodable {
     optionals = digital.guimauve.zodable.Optionals.NULLISH // How to handle optional fields, default is NULLISH
     packageName = "my-package" // npm package name, default is the gradle project name
     packageVersion = "1.0.0" // npm package version, default is the gradle project version
+    enableTypescript = true // Generate typescript schemas, default is true
+    enablePython = false // Generate pydantic schemas, default is false
 }
 ```
