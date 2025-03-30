@@ -104,7 +104,7 @@ abstract class ZodableGenerator(
 
         val (arguments, argumentImports) = type.arguments.map {
             val argument = it.type?.resolve() ?: return@map resolveUnknownType()
-            return resolveZodType(argument)
+            resolveZodType(argument)
         }.unzip().let { it.first to it.second.flatten() }
 
         val (resolvedType, resolvedImports) = resolvePrimitiveType(
