@@ -18,6 +18,7 @@ object Files {
             "version": "$version",
             "description": "Auto-generated Pydantic project from Kotlin using guimauvedigital/zodable",
             "dependencies": [],
+            "requires-python": ">=3.9"
         }
         
         with open("requirements.txt", "r") as f:

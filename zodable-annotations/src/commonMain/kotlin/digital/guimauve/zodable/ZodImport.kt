@@ -7,4 +7,5 @@ annotation class ZodImport(
     val name: String,
     val source: String,
     val filter: String = "*",
+    val isInvariable: Boolean = false,
 )

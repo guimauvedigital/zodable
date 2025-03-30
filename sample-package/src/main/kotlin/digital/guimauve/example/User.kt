@@ -7,7 +7,7 @@ import digital.guimauve.zodable.ZodType
 import digital.guimauve.zodable.Zodable
 import kotlinx.datetime.Instant
 
-@ZodImport("Id", "zodable-idschema")
+@ZodImport("IdSchema", "zodable-idschema", isInvariable = true)
 @ZodImport("MultiplatformUser", "zodable-sample-package-multiplatform")
 @Zodable
 data class User(
@@ -25,6 +25,7 @@ data class User(
     @ZodType("z.date()", "ts") @ZodType("datetime", "py") val birthDate: String, // Custom mapping
     @ZodType("IdSchema") val otherId: UUID,
     @ZodIgnore val ignored: String, // Ignored property
+    val message: Message<String>,
 ) {
 
     val notIncluded: Boolean

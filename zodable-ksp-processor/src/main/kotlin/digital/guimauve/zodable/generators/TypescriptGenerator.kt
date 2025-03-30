@@ -1,7 +1,7 @@
 package digital.guimauve.zodable.generators
 
 import com.google.devtools.ksp.processing.SymbolProcessorEnvironment
-import com.google.devtools.ksp.symbol.ClassKind
+import com.google.devtools.ksp.symbol.KSClassDeclaration
 import digital.guimauve.zodable.config.GeneratorConfig
 import digital.guimauve.zodable.config.Import
 import java.io.File
@@ -31,7 +31,7 @@ class TypescriptGenerator(
         return sourceFolder.resolve("$packageName/$name.ts")
     }
 
-    override fun resolveDefaultImports(classKind: ClassKind): Set<Import> {
+    override fun resolveDefaultImports(classDeclaration: KSClassDeclaration): Set<Import> {
         return setOf(Import("z", "zod", isExternal = true, isInvariable = true))
     }
 
@@ -50,18 +50,50 @@ class TypescriptGenerator(
         return "export * from \"./$packageName/$name\""
     }
 
-    override fun generateClassSchema(name: String, properties: Set<Pair<String, String>>): String {
+    override fun generateClassSchema(
+        name: String,
+        arguments: List<String>,
+        properties: Set<Pair<String, String>>,
+    ): String {
         val body = properties.joinToString(",\n    ") { (name, type) -> "$name: $type" }
-        return "export const ${name}Schema = z.object({\n    $body\n})" + generateInferType(name)
+        val genericPrefix = generateGenericPrefixType(arguments) + generateGenericPrefixParams(arguments)
+        return "export const ${name}Schema = ${genericPrefix}z.object({\n    $body\n})" +
+                generateInferType(name, arguments)
     }
 
-    override fun generateEnumSchema(name: String, values: Set<String>): String {
+    override fun generateEnumSchema(name: String, arguments: List<String>, values: Set<String>): String {
         val body = values.joinToString(", ") { "\"$it\"" }
-        return "export const ${name}Schema = z.enum([\n    $body\n])" + generateInferType(name)
+        val genericPrefix = generateGenericPrefixType(arguments) + generateGenericPrefixParams(arguments)
+        return "export const ${name}Schema = ${genericPrefix}z.enum([\n    $body\n])" +
+                generateInferType(name, arguments)
     }
 
-    fun generateInferType(name: String): String {
-        return if (config.inferTypes) "\nexport type $name = z.infer<typeof ${name}Schema>" else ""
+    fun generateGenericPrefixType(arguments: List<String>, schema: Boolean = true, extends: Boolean = true): String {
+        if (arguments.isEmpty()) return ""
+        return arguments.joinToString(", ", prefix = "<", postfix = ">") {
+            "${it}${if (schema) "Schema" else ""}${if (extends) " extends z.ZodTypeAny" else ""}"
+        }
+    }
+
+    fun generateGenericPrefixParams(arguments: List<String>): String {
+        if (arguments.isEmpty()) return ""
+        return arguments.joinToString(", ", prefix = " (", postfix = ") => ") {
+            "${it.replaceFirstChar { it.lowercaseChar() }}Schema: ${it}Schema"
+        }
+    }
+
+    fun generateInferType(name: String, arguments: List<String>): String {
+        if (!config.inferTypes) return ""
+        val genericPrefix = generateGenericPrefixType(arguments, schema = false, extends = false)
+        val typeOf = "typeof ${name}Schema".let {
+            if (arguments.isNotEmpty()) {
+                val genericCall = arguments.joinToString(", ", prefix = "<", postfix = ">") {
+                    "z.ZodType<${it}, any, any>"
+                }
+                "ReturnType<$it$genericCall>"
+            } else it
+        }
+        return "\nexport type $name$genericPrefix = z.infer<$typeOf>"
     }
 
     override fun resolvePrimitiveType(kotlinType: String): Pair<String, List<Import>>? {
@@ -78,16 +110,20 @@ class TypescriptGenerator(
         }
     }
 
-    override fun resolveZodableType(name: String): Pair<String, List<Import>> {
-        return "${name}Schema" to emptyList()
+    override fun resolveZodableType(name: String, isGeneric: Boolean): Pair<String, List<Import>> {
+        return "${name}Schema${if (isGeneric) "()" else ""}" to emptyList()
+    }
+
+    override fun resolveGenericArgument(name: String): Pair<String, List<Import>> {
+        return "${name.replaceFirstChar { it.lowercaseChar() }}Schema" to emptyList()
     }
 
     override fun resolveUnknownType(): Pair<String, List<Import>> {
         return "z.unknown()" to emptyList()
     }
 
-    override fun addGenericArguments(type: String, arguments: List<String>): String {
-        if (!type.endsWith("()")) return type
+    override fun addGenericArguments(type: String, arguments: List<String>): Pair<String, List<Import>> {
+        if (!type.endsWith("()")) return type to emptyList()
 
         // Coerce arguments if needed
         val coercedArguments = when (type) {
@@ -103,11 +139,11 @@ class TypescriptGenerator(
 
             else -> arguments
         }
-        return type.substring(0, type.length - 2) + "(${coercedArguments.joinToString(", ")})"
+        return type.substring(0, type.length - 2) + "(${coercedArguments.joinToString(", ")})" to emptyList()
     }
 
-    override fun markAsNullable(type: String): String {
-        return "$type${config.optionals}"
+    override fun markAsNullable(type: String): Pair<String, List<Import>> {
+        return "$type${config.optionals}" to emptyList()
     }
 
 }
