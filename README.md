@@ -27,6 +27,8 @@ data class User(
 )
 ```
 
+Build the schema with `./gradlew build`, like you would with any other gradle project.
+
 The generated schema will look like this:
 
 ```typescript
@@ -51,6 +53,8 @@ class User(BaseModel):
     id: int
     name: str
 ```
+
+Generated schemas can be found in `build/pydantable`. It is a ready to use pip package.
 
 ## Customizing the generated schema with annotations
 
