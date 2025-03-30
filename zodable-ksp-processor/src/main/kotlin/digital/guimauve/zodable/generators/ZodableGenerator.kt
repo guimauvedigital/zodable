@@ -23,6 +23,7 @@ abstract class ZodableGenerator(
             for (classDeclaration in annotatedClasses) {
                 val name = classDeclaration.simpleName.asString()
                 val packageName = classDeclaration.packageName.asString().replace(".", "/")
+                val arguments = classDeclaration.typeParameters.map { it.name.asString() }
                 val classFile = resolveClassFile(sourceFolder, packageName, name)
                 classFile.parentFile.mkdirs()
 
@@ -34,7 +35,7 @@ abstract class ZodableGenerator(
                             val values = classDeclaration.declarations.filterIsInstance<KSClassDeclaration>()
                                 .map { it.simpleName.asString() }
                                 .toSet()
-                            generateEnumSchema(name, values)
+                            generateEnumSchema(name, arguments, values)
                         }
 
                         else -> {
@@ -42,14 +43,15 @@ abstract class ZodableGenerator(
                                 .filter { it.hasBackingField }
                                 .mapNotNull { prop ->
                                     val name = prop.simpleName.asString()
-                                    val (type, localImports) = resolveZodType(prop) ?: return@mapNotNull null
+                                    val (type, localImports) = resolveZodType(prop, classDeclaration)
+                                        ?: return@mapNotNull null
                                     localImports.forEach { import ->
                                         if (imports.none { it.name == import.name }) imports.add(import)
                                     }
                                     name to type
                                 }
                                 .toSet()
-                            generateClassSchema(name, properties)
+                            generateClassSchema(name, arguments, properties)
                         }
                     }
                     val generatedImports = generateImports(sourceFolder, classFile, imports) + "\n"
@@ -70,7 +72,7 @@ abstract class ZodableGenerator(
     }
 
     private fun generateImports(classDeclaration: KSClassDeclaration): Set<Import> =
-        resolveDefaultImports(classDeclaration.classKind) + classDeclaration.annotations.mapNotNull { annotation ->
+        resolveDefaultImports(classDeclaration) + classDeclaration.annotations.mapNotNull { annotation ->
             if (annotation.shortName.asString() != "ZodImport") return@mapNotNull null
             val externalName = annotation.arguments.getOrNull(0)?.value as? String ?: return@mapNotNull null
             val externalPackageName =
@@ -80,7 +82,10 @@ abstract class ZodableGenerator(
             Import(externalName, externalPackageName, true)
         }.toSet()
 
-    private fun resolveZodType(prop: KSPropertyDeclaration): Pair<String, List<Import>>? {
+    private fun resolveZodType(
+        prop: KSPropertyDeclaration,
+        classDeclaration: KSClassDeclaration,
+    ): Pair<String, List<Import>>? {
         prop.annotations.forEach { annotation ->
             if (annotation.shortName.asString() != "ZodIgnore") return@forEach
             val filter = annotation.arguments.getOrNull(0)?.value as? String
@@ -95,27 +100,29 @@ abstract class ZodableGenerator(
             type
         }
         if (customZodType != null) return Pair(customZodType, emptyList())
-        return resolveZodType(prop.type.resolve())
+        return resolveZodType(prop.type.resolve(), classDeclaration)
     }
 
-    private fun resolveZodType(type: KSType): Pair<String, List<Import>> {
+    private fun resolveZodType(type: KSType, classDeclaration: KSClassDeclaration): Pair<String, List<Import>> {
         val isNullable = type.isMarkedNullable
         val imports = mutableListOf<Import>()
 
         val (arguments, argumentImports) = type.arguments.map {
             val argument = it.type?.resolve() ?: return@map resolveUnknownType()
-            resolveZodType(argument)
+            resolveZodType(argument, classDeclaration)
         }.unzip().let { it.first to it.second.flatten() }
 
         val (resolvedType, resolvedImports) = resolvePrimitiveType(
             type.declaration.qualifiedName?.asString() ?: "kotlin.Any"
         ) ?: {
-            val classDeclaration = type.declaration as? KSClassDeclaration
-            if (classDeclaration != null && classDeclaration.annotations.any { it.shortName.asString() == "Zodable" }) {
-                val import = classDeclaration.packageName.asString()
-                    .replace(".", "/") + "/" + classDeclaration.simpleName.asString()
+            val typeDeclaration = type.declaration as? KSClassDeclaration
+            if (typeDeclaration != null && typeDeclaration.annotations.any { it.shortName.asString() == "Zodable" }) {
+                val import = typeDeclaration.packageName.asString()
+                    .replace(".", "/") + "/" + typeDeclaration.simpleName.asString()
                 imports += Import(import.split("/").last(), import)
-                resolveZodableType(classDeclaration.simpleName.asString())
+                resolveZodableType(typeDeclaration.simpleName.asString(), typeDeclaration.typeParameters.isNotEmpty())
+            } else if (classDeclaration.typeParameters.any { it.name.asString() == type.declaration.simpleName.asString() }) {
+                resolveGenericArgument(type.declaration.simpleName.asString())
             } else {
                 val unknownType = resolveUnknownType()
                 env.logger.warn("Unsupported type ${type.declaration.simpleName.asString()}, using ${unknownType.first}")
@@ -123,12 +130,20 @@ abstract class ZodableGenerator(
             }
         }()
 
-        return Pair(
-            resolvedType
-                .let { if (arguments.isNotEmpty()) addGenericArguments(it, arguments) else it }
-                .let { if (isNullable) markAsNullable(it) else it },
-            imports + argumentImports + resolvedImports
-        )
+        val allImports = imports + argumentImports + resolvedImports
+        return (resolvedType to allImports)
+            .let {
+                if (arguments.isNotEmpty()) {
+                    val (newType, newImports) = addGenericArguments(it.first, arguments)
+                    newType to (it.second + newImports)
+                } else it
+            }
+            .let {
+                if (isNullable) {
+                    val (newType, newImports) = markAsNullable(it.first)
+                    newType to (it.second + newImports)
+                } else it
+            }
     }
 
     abstract fun shouldKeepAnnotation(annotation: String, filter: String): Boolean
@@ -136,15 +151,21 @@ abstract class ZodableGenerator(
     abstract fun resolveDependenciesFile(): File
     abstract fun resolveIndexFile(sourceFolder: File): File
     abstract fun resolveClassFile(sourceFolder: File, packageName: String, name: String): File
-    abstract fun resolveDefaultImports(classKind: ClassKind): Set<Import>
+    abstract fun resolveDefaultImports(classDeclaration: KSClassDeclaration): Set<Import>
     abstract fun generateImports(sourceFolder: File, currentFile: File, imports: Set<Import>): String
     abstract fun generateIndexExport(name: String, packageName: String): String
-    abstract fun generateClassSchema(name: String, properties: Set<Pair<String, String>>): String
-    abstract fun generateEnumSchema(name: String, values: Set<String>): String
+    abstract fun generateClassSchema(
+        name: String,
+        arguments: List<String>,
+        properties: Set<Pair<String, String>>,
+    ): String
+
+    abstract fun generateEnumSchema(name: String, arguments: List<String>, values: Set<String>): String
     abstract fun resolvePrimitiveType(kotlinType: String): Pair<String, List<Import>>?
-    abstract fun resolveZodableType(name: String): Pair<String, List<Import>>
+    abstract fun resolveZodableType(name: String, isGeneric: Boolean): Pair<String, List<Import>>
+    abstract fun resolveGenericArgument(name: String): Pair<String, List<Import>>
     abstract fun resolveUnknownType(): Pair<String, List<Import>>
-    abstract fun addGenericArguments(type: String, arguments: List<String>): String
-    abstract fun markAsNullable(type: String): String
+    abstract fun addGenericArguments(type: String, arguments: List<String>): Pair<String, List<Import>>
+    abstract fun markAsNullable(type: String): Pair<String, List<Import>>
 
 }

@@ -2,6 +2,7 @@ package digital.guimauve.zodable.generators
 
 import com.google.devtools.ksp.processing.SymbolProcessorEnvironment
 import com.google.devtools.ksp.symbol.ClassKind
+import com.google.devtools.ksp.symbol.KSClassDeclaration
 import digital.guimauve.zodable.config.GeneratorConfig
 import digital.guimauve.zodable.config.Import
 import java.io.File
@@ -33,8 +34,8 @@ class PythonGenerator(
         return sourceFolder.resolve("$packageName/$name.py")
     }
 
-    override fun resolveDefaultImports(classKind: ClassKind): Set<Import> {
-        return when (classKind) {
+    override fun resolveDefaultImports(classDeclaration: KSClassDeclaration): Set<Import> {
+        return when (classDeclaration.classKind) {
             ClassKind.ENUM_CLASS -> setOf(
                 Import("Enum", "enum", isExternal = true, isInvariable = true, isDependency = false)
             )
@@ -42,6 +43,13 @@ class PythonGenerator(
             else -> setOf(
                 Import("BaseModel", "pydantic", isExternal = true, isInvariable = true)
             )
+        }.let {
+            if (classDeclaration.typeParameters.isNotEmpty())
+                it + setOf(
+                    Import("Generic", "typing", isExternal = true, isInvariable = true),
+                    Import("TypeVar", "typing", isExternal = true, isInvariable = true)
+                )
+            else it
         }
     }
 
@@ -61,11 +69,20 @@ class PythonGenerator(
         return "from $source import ${name}Schema"
     }
 
-    override fun generateClassSchema(name: String, properties: Set<Pair<String, String>>): String {
-        return "class ${name}Schema(BaseModel):\n" + properties.joinToString("\n") { (name, type) -> "    $name: $type" }
+    override fun generateClassSchema(
+        name: String,
+        arguments: List<String>,
+        properties: Set<Pair<String, String>>,
+    ): String {
+        val typeVar = if (arguments.isNotEmpty()) arguments.joinToString("\n", postfix = "\n") {
+            "$it = TypeVar('$it')"
+        } else ""
+        val generics = if (arguments.isNotEmpty()) ", Generic[${arguments.joinToString(", ")}]" else ""
+        return "${typeVar}class ${name}Schema(BaseModel$generics):\n" +
+                properties.joinToString("\n") { (name, type) -> "    $name: $type" }
     }
 
-    override fun generateEnumSchema(name: String, values: Set<String>): String {
+    override fun generateEnumSchema(name: String, arguments: List<String>, values: Set<String>): String {
         return "class ${name}Schema(str, Enum):\n" + values.joinToString("\n") { name -> "    $name = '$name'" }
     }
 
@@ -89,21 +106,25 @@ class PythonGenerator(
         }
     }
 
-    override fun resolveZodableType(name: String): Pair<String, List<Import>> {
-        return "${name}Schema" to emptyList()
+    override fun resolveZodableType(name: String, isGeneric: Boolean): Pair<String, List<Import>> {
+        return "${name}Schema${if (isGeneric) "[]" else ""}" to emptyList()
+    }
+
+    override fun resolveGenericArgument(name: String): Pair<String, List<Import>> {
+        return name to emptyList()
     }
 
     override fun resolveUnknownType(): Pair<String, List<Import>> {
         return "Any" to listOf(Import("Any", "typing", isExternal = true, isInvariable = true))
     }
 
-    override fun addGenericArguments(type: String, arguments: List<String>): String {
-        if (!type.endsWith("[]")) return type
-        return type.substring(0, type.length - 2) + "[${arguments.joinToString(", ")}]"
+    override fun addGenericArguments(type: String, arguments: List<String>): Pair<String, List<Import>> {
+        if (!type.endsWith("[]")) return type to emptyList()
+        return type.substring(0, type.length - 2) + "[${arguments.joinToString(", ")}]" to emptyList()
     }
 
-    override fun markAsNullable(type: String): String {
-        return "$type | None"
+    override fun markAsNullable(type: String): Pair<String, List<Import>> {
+        return "Optional[$type] = None" to listOf(Import("Optional", "typing", isExternal = true, isInvariable = true))
     }
 
 }

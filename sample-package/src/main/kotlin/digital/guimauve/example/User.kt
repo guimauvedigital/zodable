@@ -25,6 +25,7 @@ data class User(
     @ZodType("z.date()", "ts") @ZodType("datetime", "py") val birthDate: String, // Custom mapping
     @ZodType("IdSchema") val otherId: UUID,
     @ZodIgnore val ignored: String, // Ignored property
+    val message: Message<String>,
 ) {
 
     val notIncluded: Boolean
