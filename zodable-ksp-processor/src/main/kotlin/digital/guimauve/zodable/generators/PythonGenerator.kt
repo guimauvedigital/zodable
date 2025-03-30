@@ -60,13 +60,13 @@ class PythonGenerator(
                 else sourceFolder.resolve(import.source)
                     .relativeTo(config.outputPath.resolve("src"))
                     .path.replace("/", ".")
-            "from $source import ${import.name}${if (!import.isInvariable) "Schema" else ""}"
+            "from $source import ${import.name}"
         }
     }
 
     override fun generateIndexExport(name: String, packageName: String): String {
         val source = "${config.packageName.pythonCompatible()}.${packageName.replace("/", ".")}.$name"
-        return "from $source import ${name}Schema"
+        return "from $source import $name"
     }
 
     override fun generateClassSchema(
@@ -78,12 +78,12 @@ class PythonGenerator(
             "$it = TypeVar('$it')"
         } else ""
         val generics = if (arguments.isNotEmpty()) ", Generic[${arguments.joinToString(", ")}]" else ""
-        return "${typeVar}class ${name}Schema(BaseModel$generics):\n" +
+        return "${typeVar}class ${name}(BaseModel$generics):\n" +
                 properties.joinToString("\n") { (name, type) -> "    $name: $type" }
     }
 
     override fun generateEnumSchema(name: String, arguments: List<String>, values: Set<String>): String {
-        return "class ${name}Schema(str, Enum):\n" + values.joinToString("\n") { name -> "    $name = '$name'" }
+        return "class ${name}(str, Enum):\n" + values.joinToString("\n") { name -> "    $name = '$name'" }
     }
 
     override fun resolvePrimitiveType(kotlinType: String): Pair<String, List<Import>>? {
@@ -107,7 +107,7 @@ class PythonGenerator(
     }
 
     override fun resolveZodableType(name: String, isGeneric: Boolean): Pair<String, List<Import>> {
-        return "${name}Schema${if (isGeneric) "[]" else ""}" to emptyList()
+        return "${name}${if (isGeneric) "[]" else ""}" to emptyList()
     }
 
     override fun resolveGenericArgument(name: String): Pair<String, List<Import>> {

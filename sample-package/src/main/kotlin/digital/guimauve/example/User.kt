@@ -7,7 +7,7 @@ import digital.guimauve.zodable.ZodType
 import digital.guimauve.zodable.Zodable
 import kotlinx.datetime.Instant
 
-@ZodImport("Id", "zodable-idschema")
+@ZodImport("IdSchema", "zodable-idschema", isInvariable = true)
 @ZodImport("MultiplatformUser", "zodable-sample-package-multiplatform")
 @Zodable
 data class User(

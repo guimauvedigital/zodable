@@ -1,10 +1,10 @@
 package digital.guimauve.zodable.generators
 
 import com.google.devtools.ksp.processing.SymbolProcessorEnvironment
-import com.google.devtools.ksp.symbol.ClassKind
-import com.google.devtools.ksp.symbol.KSClassDeclaration
-import com.google.devtools.ksp.symbol.KSPropertyDeclaration
-import com.google.devtools.ksp.symbol.KSType
+import com.google.devtools.ksp.symbol.*
+import digital.guimauve.zodable.ZodIgnore
+import digital.guimauve.zodable.ZodImport
+import digital.guimauve.zodable.ZodType
 import digital.guimauve.zodable.config.GeneratorConfig
 import digital.guimauve.zodable.config.Import
 import java.io.File
@@ -74,12 +74,9 @@ abstract class ZodableGenerator(
     private fun generateImports(classDeclaration: KSClassDeclaration): Set<Import> =
         resolveDefaultImports(classDeclaration) + classDeclaration.annotations.mapNotNull { annotation ->
             if (annotation.shortName.asString() != "ZodImport") return@mapNotNull null
-            val externalName = annotation.arguments.getOrNull(0)?.value as? String ?: return@mapNotNull null
-            val externalPackageName =
-                annotation.arguments.getOrNull(1)?.value as? String ?: return@mapNotNull null
-            val filter = annotation.arguments.getOrNull(2)?.value as? String
-            if (filter != null && !shouldKeepAnnotation("ZodImport", filter)) return@mapNotNull null
-            Import(externalName, externalPackageName, true)
+            val zodImport = annotation.toZodImport()
+            if (!shouldKeepAnnotation("ZodImport", zodImport.filter)) return@mapNotNull null
+            Import(zodImport.name, zodImport.source, true, zodImport.isInvariable)
         }.toSet()
 
     private fun resolveZodType(
@@ -88,16 +85,15 @@ abstract class ZodableGenerator(
     ): Pair<String, List<Import>>? {
         prop.annotations.forEach { annotation ->
             if (annotation.shortName.asString() != "ZodIgnore") return@forEach
-            val filter = annotation.arguments.getOrNull(0)?.value as? String
-            if (filter != null && !shouldKeepAnnotation("ZodIgnore", filter)) return@forEach
+            val zodIgnore = annotation.toZodIgnore()
+            if (!shouldKeepAnnotation("ZodIgnore", zodIgnore.filter)) return@forEach
             return@resolveZodType null
         }
         val customZodType = prop.annotations.firstNotNullOfOrNull { annotation ->
             if (annotation.shortName.asString() != "ZodType") return@firstNotNullOfOrNull null
-            val type = annotation.arguments.getOrNull(0)?.value as? String ?: return@firstNotNullOfOrNull null
-            val filter = annotation.arguments.getOrNull(1)?.value as? String
-            if (filter != null && !shouldKeepAnnotation("ZodType", filter)) return@firstNotNullOfOrNull null
-            type
+            val zodType = annotation.toZodType()
+            if (!shouldKeepAnnotation("ZodType", zodType.filter)) return@firstNotNullOfOrNull null
+            zodType.value
         }
         if (customZodType != null) return Pair(customZodType, emptyList())
         return resolveZodType(prop.type.resolve(), classDeclaration)
@@ -144,6 +140,31 @@ abstract class ZodableGenerator(
                     newType to (it.second + newImports)
                 } else it
             }
+    }
+
+    private fun KSAnnotation.toZodImport(): ZodImport {
+        val args = arguments.associateBy { it.name?.asString() }
+        return ZodImport(
+            name = args["name"]?.value as? String ?: error("Missing 'name'"),
+            source = args["source"]?.value as? String ?: error("Missing 'source'"),
+            filter = args["filter"]?.value as? String ?: "*",
+            isInvariable = args["isInvariable"]?.value as? Boolean == true
+        )
+    }
+
+    private fun KSAnnotation.toZodIgnore(): ZodIgnore {
+        val args = arguments.associateBy { it.name?.asString() }
+        return ZodIgnore(
+            filter = args["filter"]?.value as? String ?: "*",
+        )
+    }
+
+    private fun KSAnnotation.toZodType(): ZodType {
+        val args = arguments.associateBy { it.name?.asString() }
+        return ZodType(
+            value = args["value"]?.value as? String ?: error("Missing 'type'"),
+            filter = args["filter"]?.value as? String ?: "*",
+        )
     }
 
     abstract fun shouldKeepAnnotation(annotation: String, filter: String): Boolean
