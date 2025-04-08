@@ -92,7 +92,7 @@ class PythonGenerator(
             "kotlin.Int", "kotlin.Long" -> "int" to emptyList()
             "kotlin.Double", "kotlin.Float" -> "float" to emptyList()
             "kotlin.Boolean" -> "bool" to emptyList()
-            "kotlinx.datetime.Instant" -> "datetime" to listOf(
+            "kotlinx.datetime.Instant", "kotlinx.datetime.LocalDateTime", "kotlinx.datetime.LocalDate" -> "datetime" to listOf(
                 Import("datetime", "datetime", isExternal = true, isInvariable = true)
             )
 

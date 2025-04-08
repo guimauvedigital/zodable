@@ -8,7 +8,7 @@ plugins {
 
 allprojects {
     group = "digital.guimauve.zodable"
-    version = "1.3.0"
+    version = "1.3.1"
     project.ext.set("url", "https://github.com/guimauvedigital/zodable")
     project.ext.set("license.name", "GPL-3.0")
     project.ext.set("license.url", "https://opensource.org/licenses/GPL-3.0")

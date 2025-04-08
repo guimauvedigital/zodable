@@ -102,7 +102,7 @@ class TypescriptGenerator(
             "kotlin.Int" -> "z.number().int()" to emptyList()
             "kotlin.Long", "kotlin.Double", "kotlin.Float" -> "z.number()" to emptyList()
             "kotlin.Boolean" -> "z.boolean()" to emptyList()
-            "kotlinx.datetime.Instant" -> "z.coerce.date()" to emptyList()
+            "kotlinx.datetime.Instant", "kotlinx.datetime.LocalDateTime", "kotlinx.datetime.LocalDate" -> "z.coerce.date()" to emptyList()
             "dev.kaccelero.models.UUID" -> "z.string().uuid()" to emptyList()
             "kotlin.collections.List" -> "z.array()" to emptyList()
             "kotlin.collections.Map" -> "z.record()" to emptyList()
