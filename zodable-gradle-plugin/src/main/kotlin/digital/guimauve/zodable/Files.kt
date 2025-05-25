@@ -38,6 +38,9 @@ object Files {
                     "package-data": {
                         "${name.pythonCompatible()}": ["py.typed"]
                     }
+                },
+                "mypy": {
+                    "strict": True
                 }
             }
         }

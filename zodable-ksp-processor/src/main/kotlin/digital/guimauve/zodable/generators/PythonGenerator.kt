@@ -3,6 +3,7 @@ package digital.guimauve.zodable.generators
 import com.google.devtools.ksp.processing.SymbolProcessorEnvironment
 import com.google.devtools.ksp.symbol.ClassKind
 import com.google.devtools.ksp.symbol.KSClassDeclaration
+import digital.guimauve.zodable.config.Export
 import digital.guimauve.zodable.config.GeneratorConfig
 import digital.guimauve.zodable.config.Import
 import java.io.File
@@ -64,9 +65,11 @@ class PythonGenerator(
         }
     }
 
-    override fun generateIndexExport(name: String, packageName: String): String {
-        val source = "${config.packageName.pythonCompatible()}.${packageName.replace("/", ".")}.$name"
-        return "from $source import $name"
+    override fun generateIndexExport(exports: Sequence<Export>): String {
+        return exports.joinToString("\n") {
+            val source = "${config.packageName.pythonCompatible()}.${it.packageName.replace("/", ".")}.${it.name}"
+            "from $source import ${it.name}"
+        } + "\n__all__ = [" + exports.joinToString(", ") { "\"${it.name}\"" } + "]"
     }
 
     override fun generateClassSchema(

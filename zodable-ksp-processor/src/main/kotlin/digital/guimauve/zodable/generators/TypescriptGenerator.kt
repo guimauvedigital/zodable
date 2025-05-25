@@ -2,6 +2,7 @@ package digital.guimauve.zodable.generators
 
 import com.google.devtools.ksp.processing.SymbolProcessorEnvironment
 import com.google.devtools.ksp.symbol.KSClassDeclaration
+import digital.guimauve.zodable.config.Export
 import digital.guimauve.zodable.config.GeneratorConfig
 import digital.guimauve.zodable.config.Import
 import java.io.File
@@ -46,8 +47,14 @@ class TypescriptGenerator(
         }
     }
 
-    override fun generateIndexExport(name: String, packageName: String): String {
-        return "export * from \"./$packageName/$name\""
+    override fun generateIndexExport(exports: Sequence<Export>): String {
+        return exports.joinToString("\n") {
+            val namesToExport = listOfNotNull(
+                "${it.name}Schema",
+                if (config.inferTypes) it.name else null
+            ).joinToString(prefix = "{", postfix = "}", separator = ", ")
+            "export $namesToExport from \"./${it.packageName}/${it.name}\""
+        }
     }
 
     override fun generateClassSchema(
@@ -77,21 +84,21 @@ class TypescriptGenerator(
 
     fun generateGenericPrefixParams(arguments: List<String>): String {
         if (arguments.isEmpty()) return ""
-        return arguments.joinToString(", ", prefix = " (", postfix = ") => ") {
-            "${it.replaceFirstChar { it.lowercaseChar() }}Schema: ${it}Schema"
+        return arguments.joinToString(", ", prefix = " (", postfix = ") => ") { argument ->
+            "${argument.replaceFirstChar { it.lowercaseChar() }}Schema: ${argument}Schema"
         }
     }
 
     fun generateInferType(name: String, arguments: List<String>): String {
         if (!config.inferTypes) return ""
         val genericPrefix = generateGenericPrefixType(arguments, schema = false, extends = false)
-        val typeOf = "typeof ${name}Schema".let {
+        val typeOf = "typeof ${name}Schema".let { rawTypeOf ->
             if (arguments.isNotEmpty()) {
                 val genericCall = arguments.joinToString(", ", prefix = "<", postfix = ">") {
                     "z.ZodType<${it}, any, any>"
                 }
-                "ReturnType<$it$genericCall>"
-            } else it
+                "ReturnType<$rawTypeOf$genericCall>"
+            } else rawTypeOf
         }
         return "\nexport type $name$genericPrefix = z.infer<$typeOf>"
     }

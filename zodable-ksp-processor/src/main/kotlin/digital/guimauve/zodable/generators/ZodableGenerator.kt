@@ -5,6 +5,7 @@ import com.google.devtools.ksp.symbol.*
 import digital.guimauve.zodable.ZodIgnore
 import digital.guimauve.zodable.ZodImport
 import digital.guimauve.zodable.ZodType
+import digital.guimauve.zodable.config.Export
 import digital.guimauve.zodable.config.GeneratorConfig
 import digital.guimauve.zodable.config.Import
 import java.io.File
@@ -19,50 +20,51 @@ abstract class ZodableGenerator(
         val sourceFolder = resolveSourceFolder().also { it.mkdirs() }
         val importedPackages = mutableSetOf<String>()
         val indexFile = resolveIndexFile(sourceFolder).outputStream()
-        OutputStreamWriter(indexFile, Charsets.UTF_8).use { writer ->
-            for (classDeclaration in annotatedClasses) {
-                val name = classDeclaration.simpleName.asString()
-                val packageName = classDeclaration.packageName.asString().replace(".", "/")
-                val arguments = classDeclaration.typeParameters.map { it.name.asString() }
-                val classFile = resolveClassFile(sourceFolder, packageName, name)
-                classFile.parentFile.mkdirs()
+        val exports = annotatedClasses.map { classDeclaration ->
+            val name = classDeclaration.simpleName.asString()
+            val packageName = classDeclaration.packageName.asString().replace(".", "/")
+            val arguments = classDeclaration.typeParameters.map { it.name.asString() }
+            val classFile = resolveClassFile(sourceFolder, packageName, name)
+            classFile.parentFile.mkdirs()
 
-                OutputStreamWriter(classFile.outputStream(), Charsets.UTF_8).use { schemaWriter ->
-                    val imports = generateImports(classDeclaration).toMutableSet()
+            OutputStreamWriter(classFile.outputStream(), Charsets.UTF_8).use { schemaWriter ->
+                val imports = generateImports(classDeclaration).toMutableSet()
 
-                    val generatedBody = when (classDeclaration.classKind) {
-                        ClassKind.ENUM_CLASS -> {
-                            val values = classDeclaration.declarations.filterIsInstance<KSClassDeclaration>()
-                                .map { it.simpleName.asString() }
-                                .toSet()
-                            generateEnumSchema(name, arguments, values)
-                        }
-
-                        else -> {
-                            val properties = classDeclaration.getAllProperties()
-                                .filter { it.hasBackingField }
-                                .mapNotNull { prop ->
-                                    val name = prop.simpleName.asString()
-                                    val (type, localImports) = resolveZodType(prop, classDeclaration)
-                                        ?: return@mapNotNull null
-                                    localImports.forEach { import ->
-                                        if (imports.none { it.name == import.name }) imports.add(import)
-                                    }
-                                    name to type
-                                }
-                                .toSet()
-                            generateClassSchema(name, arguments, properties)
-                        }
+                val generatedBody = when (classDeclaration.classKind) {
+                    ClassKind.ENUM_CLASS -> {
+                        val values = classDeclaration.declarations.filterIsInstance<KSClassDeclaration>()
+                            .map { it.simpleName.asString() }
+                            .toSet()
+                        generateEnumSchema(name, arguments, values)
                     }
-                    val generatedImports = generateImports(sourceFolder, classFile, imports) + "\n"
 
-                    schemaWriter.write(generatedImports + "\n")
-                    schemaWriter.write(generatedBody + "\n")
-
-                    importedPackages.addAll(imports.filter { it.isExternal && it.isDependency }.map { it.source })
+                    else -> {
+                        val properties = classDeclaration.getAllProperties()
+                            .filter { it.hasBackingField }
+                            .mapNotNull { prop ->
+                                val name = prop.simpleName.asString()
+                                val (type, localImports) = resolveZodType(prop, classDeclaration)
+                                    ?: return@mapNotNull null
+                                localImports.forEach { import ->
+                                    if (imports.none { it.name == import.name }) imports.add(import)
+                                }
+                                name to type
+                            }
+                            .toSet()
+                        generateClassSchema(name, arguments, properties)
+                    }
                 }
-                writer.write(generateIndexExport(name, packageName) + "\n")
+                val generatedImports = generateImports(sourceFolder, classFile, imports) + "\n"
+
+                schemaWriter.write(generatedImports + "\n")
+                schemaWriter.write(generatedBody + "\n")
+
+                importedPackages.addAll(imports.filter { it.isExternal && it.isDependency }.map { it.source })
             }
+            Export(name, packageName)
+        }
+        OutputStreamWriter(indexFile, Charsets.UTF_8).use { indexWriter ->
+            indexWriter.write(generateIndexExport(exports) + "\n")
         }
 
         val dependenciesFile = resolveDependenciesFile().outputStream()
@@ -174,7 +176,7 @@ abstract class ZodableGenerator(
     abstract fun resolveClassFile(sourceFolder: File, packageName: String, name: String): File
     abstract fun resolveDefaultImports(classDeclaration: KSClassDeclaration): Set<Import>
     abstract fun generateImports(sourceFolder: File, currentFile: File, imports: Set<Import>): String
-    abstract fun generateIndexExport(name: String, packageName: String): String
+    abstract fun generateIndexExport(exports: Sequence<Export>): String
     abstract fun generateClassSchema(
         name: String,
         arguments: List<String>,
