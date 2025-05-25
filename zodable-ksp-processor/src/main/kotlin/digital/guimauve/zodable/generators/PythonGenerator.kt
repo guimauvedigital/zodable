@@ -19,7 +19,7 @@ class PythonGenerator(
     }
 
     override fun resolveSourceFolder(): File {
-        return config.outputPath.resolve("src/" + config.packageName.pythonCompatible())
+        return config.outputPath.resolve(config.packageName.pythonCompatible())
     }
 
     override fun resolveDependenciesFile(): File {
@@ -58,7 +58,7 @@ class PythonGenerator(
             val source =
                 if (import.isExternal) import.source.pythonCompatible()
                 else sourceFolder.resolve(import.source)
-                    .relativeTo(config.outputPath.resolve("src"))
+                    .relativeTo(config.outputPath)
                     .path.replace("/", ".")
             "from $source import ${import.name}"
         }

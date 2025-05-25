@@ -1,6 +1,7 @@
 package digital.guimauve.zodable
 
 import com.google.devtools.ksp.gradle.KspExtension
+import digital.guimauve.zodable.Files.pythonCompatible
 import digital.guimauve.zodable.extensions.ZodableExtension
 import org.gradle.api.Plugin
 import org.gradle.api.Project
@@ -13,7 +14,7 @@ import java.io.File
 
 abstract class ZodablePlugin : Plugin<Project> {
 
-    private val zodableVersion = "1.3.1"
+    private val zodableVersion = "1.3.2"
 
     override fun apply(project: Project) {
         val outputPath = project.file("build/zodable")
@@ -140,7 +141,9 @@ abstract class ZodablePlugin : Plugin<Project> {
                             )
                         )
                     ),
-                    ExecCommand(listOf(pipExec, "install", "build", "twine")),
+                    ExecCommand(listOf("touch", "${extension.packageName.get().pythonCompatible()}/py.typed")),
+                    ExecCommand(listOf(pipExec, "install", "mypy", "build", "twine")),
+                    ExecCommand(listOf(pythonExec, "-m", "mypy", extension.packageName.get().pythonCompatible())),
                     ExecCommand(listOf(pythonExec, "-m", "build")),
                 ).forEach { command ->
                     exec {

@@ -2,6 +2,8 @@ package digital.guimauve.zodable
 
 object Files {
 
+    fun String.pythonCompatible() = this.replace("-", "_")
+
     const val ZOD_DESCRIPTION = "Auto-generated zod project from Kotlin using guimauvedigital/zodable"
 
     fun generatePyProjectToml(
@@ -30,6 +32,13 @@ object Files {
             "build-system": {
                 "requires": ["setuptools", "wheel"],
                 "build-backend": "setuptools.build_meta"
+            },
+            "tool": {
+                "setuptools": {
+                    "package-data": {
+                        "${name.pythonCompatible()}": ["py.typed"]
+                    }
+                }
             }
         }
         
