@@ -95,6 +95,10 @@ class PythonGenerator(
             "kotlin.Int", "kotlin.Long" -> "int" to emptyList()
             "kotlin.Double", "kotlin.Float" -> "float" to emptyList()
             "kotlin.Boolean" -> "bool" to emptyList()
+            "kotlin.Pair" -> "KotlinPair[]" to listOf(
+                Import("KotlinPair", "zodable-kotlin-primitives", isExternal = true, isInvariable = true)
+            )
+
             "kotlinx.datetime.Instant", "kotlinx.datetime.LocalDateTime", "kotlinx.datetime.LocalDate" -> "datetime" to listOf(
                 Import("datetime", "datetime", isExternal = true, isInvariable = true)
             )

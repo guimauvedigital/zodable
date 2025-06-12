@@ -23,6 +23,7 @@ data class User(
     val settings: Map<String, Boolean>, // Map of primitive types
     val eventsByYear: Map<Int, List<String>>, // Map of primitive types, with non-string key
     val contactGroups: Map<String, List<Address>>, // Nested generics
+    val coordinates: Pair<Double, Double>, // Pair of primitive types
     val createdAt: Instant,
     val day: LocalDate,
     val daytime: LocalDateTime,
