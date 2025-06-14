@@ -8,7 +8,7 @@ Add the following to your `build.gradle.kts`:
 
 ```kotlin
 plugins {
-    id("digital.guimauve.zodable") version "1.4.3"
+    id("digital.guimauve.zodable") version "1.2.0"
     id("com.google.devtools.ksp") version "2.1.10-1.0.30" // Adjust version as needed
 }
 ```
@@ -99,6 +99,39 @@ data class User(
 
 The first argument is the zod type, the second argument is a filter for the target language. If you defined a custom
 schema in another package or are only enabling one language, you can omit the filter.
+
+### `@ZodOverrideSchema`
+
+Need the maximum flexibility? You can override the entire schema for a field with the `@ZodOverrideSchema` annotation:
+
+```kotlin
+@Zodable
+@ZodOverrideSchema(
+    content = """
+        export const CustomSchema = z.object({
+            name: z.string(),
+            age: z.number().int(),
+            isActive: z.boolean(),
+            tags: z.array(z.string()),
+        })
+        export type Custom = z.infer<typeof CustomSchema>
+    """,
+    filter = "ts"
+)
+@ZodOverrideSchema(
+    content = """
+        from typing import List
+
+        class Custom(BaseModel):
+            name: str
+            age: int
+            is_active: bool
+            tags: List[str]
+    """,
+    filter = "py"
+)
+interface Custom
+```
 
 ## Configuration options
 

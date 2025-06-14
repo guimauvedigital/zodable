@@ -15,7 +15,7 @@ abstract class ZodableGenerator(
     protected val config: GeneratorConfig,
 ) {
 
-    fun generateFiles(annotatedClasses: Sequence<KSClassDeclaration>, zodableSchemas: Sequence<KSDeclaration>) {
+    fun generateFiles(annotatedClasses: Sequence<KSClassDeclaration>) {
         val sourceFolder = resolveSourceFolder().also { it.mkdirs() }
         val importedPackages = mutableSetOf<String>()
         val indexFile = resolveIndexFile(sourceFolder).outputStream()
@@ -30,7 +30,14 @@ abstract class ZodableGenerator(
             OutputStreamWriter(classFile.outputStream(), Charsets.UTF_8).use { schemaWriter ->
                 val imports = generateImports(classDeclaration).toMutableSet()
 
-                val generatedBody = when (classDeclaration.classKind) {
+                val overriddenSchema = classDeclaration.annotations.firstNotNullOfOrNull { annotation ->
+                    if (annotation.shortName.asString() != ZodOverrideSchema::class.simpleName) return@firstNotNullOfOrNull null
+                    val zodOverride = annotation.toZodOverrideSchema()
+                    if (!shouldKeepAnnotation("ZodOverrideSchema", zodOverride.filter)) return@firstNotNullOfOrNull null
+                    zodOverride.content.trimIndent()
+                }
+
+                val generatedBody = overriddenSchema ?: when (classDeclaration.classKind) {
                     ClassKind.ENUM_CLASS -> {
                         val values = classDeclaration.declarations.filterIsInstance<KSClassDeclaration>()
                             .map { it.simpleName.asString() }
@@ -63,23 +70,6 @@ abstract class ZodableGenerator(
                 schemaWriter.write(generatedBody + "\n")
 
                 importedPackages.addAll(imports.filter { it.isExternal && it.isDependency }.map { it.source })
-            }
-            Export(name, packageName)
-        } + zodableSchemas.flatMap { file ->
-            file.annotations.mapNotNull {
-                if (it.shortName.asString() != ZodableSchema::class.simpleName) return@mapNotNull null
-                val zodableSchema = it.toZodableSchema()
-                if (!shouldKeepAnnotation("ZodImport", zodableSchema.filter)) return@mapNotNull null
-                file to zodableSchema
-            }
-        }.map { (file, schema) ->
-            val name = schema.name
-            val packageName = file.packageName.asString().replace(".", "/")
-            val classFile = resolveClassFile(sourceFolder, packageName, name)
-            classFile.parentFile.mkdirs()
-
-            OutputStreamWriter(classFile.outputStream(), Charsets.UTF_8).use { schemaWriter ->
-                schemaWriter.write(schema.schema.trimIndent() + "\n")
             }
             Export(name, packageName)
         }
@@ -165,11 +155,10 @@ abstract class ZodableGenerator(
             }
     }
 
-    private fun KSAnnotation.toZodableSchema(): ZodableSchema {
+    private fun KSAnnotation.toZodOverrideSchema(): ZodOverrideSchema {
         val args = arguments.associateBy { it.name?.asString() }
-        return ZodableSchema(
-            name = args["name"]?.value as? String ?: error("Missing 'name'"),
-            schema = args["schema"]?.value as? String ?: error("Missing 'schema'"),
+        return ZodOverrideSchema(
+            content = args["content"]?.value as? String ?: error("Missing 'content'"),
             filter = args["filter"]?.value as? String ?: "*",
         )
     }
