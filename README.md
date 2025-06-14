@@ -102,7 +102,7 @@ schema in another package or are only enabling one language, you can omit the fi
 
 ### `@ZodOverrideSchema`
 
-Need the maximum flexibility? You can override the entire schema for a field with the `@ZodOverrideSchema` annotation:
+Need the maximum flexibility? You can override the entire schema for a type with the `@ZodOverrideSchema` annotation:
 
 ```kotlin
 @Zodable
