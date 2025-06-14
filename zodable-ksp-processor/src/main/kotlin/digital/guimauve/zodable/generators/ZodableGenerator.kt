@@ -8,6 +8,7 @@ import digital.guimauve.zodable.ZodType
 import digital.guimauve.zodable.config.Export
 import digital.guimauve.zodable.config.GeneratorConfig
 import digital.guimauve.zodable.config.Import
+import kotlinx.serialization.SerialName
 import java.io.File
 import java.io.OutputStreamWriter
 
@@ -42,7 +43,10 @@ abstract class ZodableGenerator(
                         val properties = classDeclaration.getAllProperties()
                             .filter { it.hasBackingField }
                             .mapNotNull { prop ->
-                                val name = prop.simpleName.asString()
+                                val name = prop.annotations.firstNotNullOfOrNull { annotation ->
+                                    if (annotation.shortName.asString() != "SerialName") return@firstNotNullOfOrNull null
+                                    annotation.toSerialName().value
+                                } ?: prop.simpleName.asString()
                                 val (type, localImports) = resolveZodType(prop, classDeclaration)
                                     ?: return@mapNotNull null
                                 localImports.forEach { import ->
@@ -166,6 +170,13 @@ abstract class ZodableGenerator(
         return ZodType(
             value = args["value"]?.value as? String ?: error("Missing 'type'"),
             filter = args["filter"]?.value as? String ?: "*",
+        )
+    }
+
+    private fun KSAnnotation.toSerialName(): SerialName {
+        val args = arguments.associateBy { it.name?.asString() }
+        return SerialName(
+            value = args["value"]?.value as? String ?: "*",
         )
     }
 

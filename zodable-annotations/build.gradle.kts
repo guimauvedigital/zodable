@@ -1,5 +1,6 @@
 plugins {
     kotlin("multiplatform")
+    kotlin("plugin.serialization")
     id("com.vanniktech.maven.publish")
 }
 
@@ -75,7 +76,7 @@ kotlin {
     sourceSets {
         val commonMain by getting {
             dependencies {
-                implementation("dev.kaccelero:core:0.4.13")
+                implementation("dev.kaccelero:core:0.5.1")
             }
         }
     }
