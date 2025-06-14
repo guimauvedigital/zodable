@@ -2,9 +2,7 @@ package digital.guimauve.zodable.generators
 
 import com.google.devtools.ksp.processing.SymbolProcessorEnvironment
 import com.google.devtools.ksp.symbol.*
-import digital.guimauve.zodable.ZodIgnore
-import digital.guimauve.zodable.ZodImport
-import digital.guimauve.zodable.ZodType
+import digital.guimauve.zodable.*
 import digital.guimauve.zodable.config.Export
 import digital.guimauve.zodable.config.GeneratorConfig
 import digital.guimauve.zodable.config.Import
@@ -17,10 +15,11 @@ abstract class ZodableGenerator(
     protected val config: GeneratorConfig,
 ) {
 
-    fun generateFiles(annotatedClasses: Sequence<KSClassDeclaration>) {
+    fun generateFiles(annotatedClasses: Sequence<KSClassDeclaration>, zodableSchemas: Sequence<KSDeclaration>) {
         val sourceFolder = resolveSourceFolder().also { it.mkdirs() }
         val importedPackages = mutableSetOf<String>()
         val indexFile = resolveIndexFile(sourceFolder).outputStream()
+
         val exports = annotatedClasses.map { classDeclaration ->
             val name = classDeclaration.simpleName.asString()
             val packageName = classDeclaration.packageName.asString().replace(".", "/")
@@ -44,7 +43,7 @@ abstract class ZodableGenerator(
                             .filter { it.hasBackingField }
                             .mapNotNull { prop ->
                                 val name = prop.annotations.firstNotNullOfOrNull { annotation ->
-                                    if (annotation.shortName.asString() != "SerialName") return@firstNotNullOfOrNull null
+                                    if (annotation.shortName.asString() != SerialName::class.simpleName) return@firstNotNullOfOrNull null
                                     annotation.toSerialName().value
                                 } ?: prop.simpleName.asString()
                                 val (type, localImports) = resolveZodType(prop, classDeclaration)
@@ -66,7 +65,25 @@ abstract class ZodableGenerator(
                 importedPackages.addAll(imports.filter { it.isExternal && it.isDependency }.map { it.source })
             }
             Export(name, packageName)
+        } + zodableSchemas.flatMap { file ->
+            file.annotations.mapNotNull {
+                if (it.shortName.asString() != ZodableSchema::class.simpleName) return@mapNotNull null
+                val zodableSchema = it.toZodableSchema()
+                if (!shouldKeepAnnotation("ZodImport", zodableSchema.filter)) return@mapNotNull null
+                file to zodableSchema
+            }
+        }.map { (file, schema) ->
+            val name = schema.name
+            val packageName = file.packageName.asString().replace(".", "/")
+            val classFile = resolveClassFile(sourceFolder, packageName, name)
+            classFile.parentFile.mkdirs()
+
+            OutputStreamWriter(classFile.outputStream(), Charsets.UTF_8).use { schemaWriter ->
+                schemaWriter.write(schema.schema.trimIndent() + "\n")
+            }
+            Export(name, packageName)
         }
+
         OutputStreamWriter(indexFile, Charsets.UTF_8).use { indexWriter ->
             indexWriter.write(generateIndexExport(exports) + "\n")
         }
@@ -79,7 +96,7 @@ abstract class ZodableGenerator(
 
     private fun generateImports(classDeclaration: KSClassDeclaration): Set<Import> =
         resolveDefaultImports(classDeclaration) + classDeclaration.annotations.mapNotNull { annotation ->
-            if (annotation.shortName.asString() != "ZodImport") return@mapNotNull null
+            if (annotation.shortName.asString() != ZodImport::class.simpleName) return@mapNotNull null
             val zodImport = annotation.toZodImport()
             if (!shouldKeepAnnotation("ZodImport", zodImport.filter)) return@mapNotNull null
             Import(zodImport.name, zodImport.source, true, zodImport.isInvariable)
@@ -90,13 +107,13 @@ abstract class ZodableGenerator(
         classDeclaration: KSClassDeclaration,
     ): Pair<String, List<Import>>? {
         prop.annotations.forEach { annotation ->
-            if (annotation.shortName.asString() != "ZodIgnore") return@forEach
+            if (annotation.shortName.asString() != ZodIgnore::class.simpleName) return@forEach
             val zodIgnore = annotation.toZodIgnore()
             if (!shouldKeepAnnotation("ZodIgnore", zodIgnore.filter)) return@forEach
             return@resolveZodType null
         }
         val customZodType = prop.annotations.firstNotNullOfOrNull { annotation ->
-            if (annotation.shortName.asString() != "ZodType") return@firstNotNullOfOrNull null
+            if (annotation.shortName.asString() != ZodType::class.simpleName) return@firstNotNullOfOrNull null
             val zodType = annotation.toZodType()
             if (!shouldKeepAnnotation("ZodType", zodType.filter)) return@firstNotNullOfOrNull null
             zodType.value
@@ -118,7 +135,7 @@ abstract class ZodableGenerator(
             type.declaration.qualifiedName?.asString() ?: "kotlin.Any"
         ) ?: {
             val typeDeclaration = type.declaration as? KSClassDeclaration
-            if (typeDeclaration != null && typeDeclaration.annotations.any { it.shortName.asString() == "Zodable" }) {
+            if (typeDeclaration != null && typeDeclaration.annotations.any { it.shortName.asString() == Zodable::class.simpleName }) {
                 val import = typeDeclaration.packageName.asString()
                     .replace(".", "/") + "/" + typeDeclaration.simpleName.asString()
                 imports += Import(import.split("/").last(), import)
@@ -146,6 +163,15 @@ abstract class ZodableGenerator(
                     newType to (it.second + newImports)
                 } else it
             }
+    }
+
+    private fun KSAnnotation.toZodableSchema(): ZodableSchema {
+        val args = arguments.associateBy { it.name?.asString() }
+        return ZodableSchema(
+            name = args["name"]?.value as? String ?: error("Missing 'name'"),
+            schema = args["schema"]?.value as? String ?: error("Missing 'schema'"),
+            filter = args["filter"]?.value as? String ?: "*",
+        )
     }
 
     private fun KSAnnotation.toZodImport(): ZodImport {
