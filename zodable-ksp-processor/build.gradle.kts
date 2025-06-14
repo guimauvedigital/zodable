@@ -1,5 +1,6 @@
 plugins {
     kotlin("jvm")
+    kotlin("plugin.serialization")
     id("org.jetbrains.kotlinx.kover")
     id("com.google.devtools.ksp")
     id("com.vanniktech.maven.publish")
@@ -34,5 +35,6 @@ mavenPublishing {
 
 dependencies {
     implementation("com.google.devtools.ksp:symbol-processing-api:2.1.10-1.0.30")
+    implementation("dev.kaccelero:core:0.5.1")
     api(project(":zodable-annotations"))
 }

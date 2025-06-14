@@ -8,6 +8,7 @@ import digital.guimauve.zodable.Zodable
 import kotlinx.datetime.Instant
 import kotlinx.datetime.LocalDate
 import kotlinx.datetime.LocalDateTime
+import kotlinx.serialization.SerialName
 
 @ZodImport("IdSchema", "zodable-idschema", isInvariable = true)
 @ZodImport("MultiplatformUser", "zodable-sample-package-multiplatform")
@@ -31,6 +32,7 @@ data class User(
     @ZodType("z.date()", "ts") @ZodType("datetime", "py") val birthDate: String, // Custom mapping
     @ZodType("IdSchema") val otherId: UUID,
     @ZodIgnore val ignored: String, // Ignored property
+    @SerialName("custom_name") val customName: String, // Custom serialization name
     val message: Message<String>,
 ) {
 
