@@ -31,7 +31,6 @@ kotlin {
     // jvm & js
     jvmToolchain(21)
     jvm {
-        withJava()
         testRuns.named("test") {
             executionTask.configure {
                 useJUnitPlatform()
@@ -49,7 +48,7 @@ kotlin {
     sourceSets {
         val commonMain by getting {
             dependencies {
-                implementation("dev.kaccelero:core:0.4.5")
+                implementation("dev.kaccelero:core:0.6.0")
             }
         }
     }

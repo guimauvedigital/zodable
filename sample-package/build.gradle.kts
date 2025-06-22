@@ -5,7 +5,7 @@ plugins {
 }
 
 dependencies {
-    implementation("dev.kaccelero:core:0.4.5")
+    implementation("dev.kaccelero:core:0.6.0")
     implementation(project(":sample-package-multiplatform"))
 }
 
