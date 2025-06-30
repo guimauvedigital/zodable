@@ -75,7 +75,7 @@ kotlin {
     sourceSets {
         val commonMain by getting {
             dependencies {
-                implementation("dev.kaccelero:core:0.6.0")
+                api("dev.kaccelero:core:0.6.1")
             }
         }
     }
