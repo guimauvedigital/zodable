@@ -75,6 +75,15 @@ class TypescriptGenerator(
                 generateInferType(name, arguments)
     }
 
+    override fun generateUnionSchema(name: String, arguments: List<String>, values: Set<String>): String {
+        val joinedValues = values.joinToString(",\n") { "    ${it}Schema" }
+        val body =
+            if (joinedValues.isEmpty()) "z.never()"
+            else "z.discriminatedUnion(\"type\", [\n$joinedValues\n])"
+        val genericPrefix = generateGenericPrefixType(arguments) + generateGenericPrefixParams(arguments)
+        return "export const ${name}Schema = $genericPrefix$body" + generateInferType(name, arguments)
+    }
+
     fun generateGenericPrefixType(arguments: List<String>, schema: Boolean = true, extends: Boolean = true): String {
         if (arguments.isEmpty()) return ""
         return arguments.joinToString(", ", prefix = "<", postfix = ">") {
@@ -123,6 +132,10 @@ class TypescriptGenerator(
 
     override fun resolveZodableType(name: String, isGeneric: Boolean): Pair<String, List<Import>> {
         return "${name}Schema${if (isGeneric) "()" else ""}" to emptyList()
+    }
+
+    override fun resolveLiteralType(name: String): Pair<String, List<Import>> {
+        return "z.literal(\"$name\")" to emptyList()
     }
 
     override fun resolveGenericArgument(name: String): Pair<String, List<Import>> {

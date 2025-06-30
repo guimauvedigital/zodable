@@ -37,32 +37,17 @@ abstract class ZodableGenerator(
                     zodOverride.content.trimIndent()
                 }
 
-                val generatedBody = overriddenSchema ?: when (classDeclaration.classKind) {
-                    ClassKind.ENUM_CLASS -> {
-                        val values = classDeclaration.declarations.filterIsInstance<KSClassDeclaration>()
-                            .map { it.simpleName.asString() }
-                            .toSet()
-                        generateEnumSchema(name, arguments, values)
-                    }
+                val sealedSubclasses = try {
+                    classDeclaration.getSealedSubclasses().toList()
+                } catch (_: Exception) {
+                    emptyList()
+                }
 
-                    else -> {
-                        val properties = classDeclaration.getAllProperties()
-                            .filter { it.hasBackingField }
-                            .mapNotNull { prop ->
-                                val name = prop.annotations.firstNotNullOfOrNull { annotation ->
-                                    if (annotation.shortName.asString() != SerialName::class.simpleName) return@firstNotNullOfOrNull null
-                                    annotation.toSerialName().value
-                                } ?: prop.simpleName.asString()
-                                val (type, localImports) = resolveZodType(prop, classDeclaration)
-                                    ?: return@mapNotNull null
-                                localImports.forEach { import ->
-                                    if (imports.none { it.name == import.name }) imports.add(import)
-                                }
-                                name to type
-                            }
-                            .toSet()
-                        generateClassSchema(name, arguments, properties)
-                    }
+                val generatedBody = overriddenSchema ?: if (sealedSubclasses.isNotEmpty()) {
+                    processSealedClass(name, arguments, sealedSubclasses, imports)
+                } else when (classDeclaration.classKind) {
+                    ClassKind.ENUM_CLASS -> processEnumClass(name, arguments, classDeclaration)
+                    else -> processClass(name, arguments, classDeclaration, imports)
                 }
                 val generatedImports = generateImports(sourceFolder, classFile, imports) + "\n"
 
@@ -82,6 +67,69 @@ abstract class ZodableGenerator(
         OutputStreamWriter(dependenciesFile, Charsets.UTF_8).use { depWriter ->
             importedPackages.forEach { depWriter.write("$it\n") }
         }
+    }
+
+    private fun processEnumClass(name: String, arguments: List<String>, classDeclaration: KSClassDeclaration): String {
+        val values = classDeclaration.declarations.filterIsInstance<KSClassDeclaration>()
+            .map { it.simpleName.asString() }
+            .toSet()
+        return generateEnumSchema(name, arguments, values)
+    }
+
+    private fun processSealedClass(
+        name: String,
+        arguments: List<String>,
+        subclasses: List<KSClassDeclaration>,
+        imports: MutableSet<Import>,
+    ): String {
+        val variants = subclasses.associate { subclass ->
+            // Get the SerialName annotation value to use as the discriminator value
+            val subclassName = subclass.simpleName.asString()
+            val serialName = subclass.annotations.firstNotNullOfOrNull { annotation ->
+                if (annotation.shortName.asString() != "SerialName") return@firstNotNullOfOrNull null
+                val args = annotation.arguments.associateBy { it.name?.asString() }
+                args["value"]?.value as? String
+            } ?: subclass.simpleName.asString()
+            val subclassArguments = subclass.typeParameters.map { it.name.asString() }
+            val (literalType, literalImports) = resolveLiteralType(serialName)
+            imports.addAll(literalImports)
+
+            subclassName to processClass(
+                name = subclassName,
+                arguments = subclassArguments,
+                classDeclaration = subclass,
+                imports = imports,
+                additionalProperties = setOf("type" to literalType),
+            )
+        }
+        val union = generateUnionSchema(name, arguments, variants.keys)
+
+        return variants.values.joinToString("\n\n") + "\n\n" + union
+    }
+
+    private fun processClass(
+        name: String,
+        arguments: List<String>,
+        classDeclaration: KSClassDeclaration,
+        imports: MutableSet<Import>,
+        additionalProperties: Set<Pair<String, String>> = emptySet(),
+    ): String {
+        val properties = classDeclaration.getAllProperties()
+            .filter { it.hasBackingField }
+            .mapNotNull { prop ->
+                val name = prop.annotations.firstNotNullOfOrNull { annotation ->
+                    if (annotation.shortName.asString() != SerialName::class.simpleName) return@firstNotNullOfOrNull null
+                    annotation.toSerialName().value
+                } ?: prop.simpleName.asString()
+                val (type, localImports) = resolveZodType(prop, classDeclaration)
+                    ?: return@mapNotNull null
+                localImports.forEach { import ->
+                    if (imports.none { it.name == import.name }) imports.add(import)
+                }
+                name to type
+            }
+            .toSet()
+        return generateClassSchema(name, arguments, properties + additionalProperties)
     }
 
     private fun generateImports(classDeclaration: KSClassDeclaration): Set<Import> =
@@ -210,8 +258,10 @@ abstract class ZodableGenerator(
     ): String
 
     abstract fun generateEnumSchema(name: String, arguments: List<String>, values: Set<String>): String
+    abstract fun generateUnionSchema(name: String, arguments: List<String>, values: Set<String>): String
     abstract fun resolvePrimitiveType(kotlinType: String): Pair<String, List<Import>>?
     abstract fun resolveZodableType(name: String, isGeneric: Boolean): Pair<String, List<Import>>
+    abstract fun resolveLiteralType(name: String): Pair<String, List<Import>>
     abstract fun resolveGenericArgument(name: String): Pair<String, List<Import>>
     abstract fun resolveUnknownType(): Pair<String, List<Import>>
     abstract fun addGenericArguments(type: String, arguments: List<String>): Pair<String, List<Import>>

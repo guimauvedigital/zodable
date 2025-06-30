@@ -36,6 +36,12 @@ class PythonGenerator(
     }
 
     override fun resolveDefaultImports(classDeclaration: KSClassDeclaration): Set<Import> {
+        val sealedSubclasses = try {
+            classDeclaration.getSealedSubclasses().toList()
+        } catch (_: Exception) {
+            emptyList()
+        }
+
         return when (classDeclaration.classKind) {
             ClassKind.ENUM_CLASS -> setOf(
                 Import("Enum", "enum", isExternal = true, isInvariable = true, isDependency = false)
@@ -45,12 +51,14 @@ class PythonGenerator(
                 Import("BaseModel", "pydantic", isExternal = true, isInvariable = true)
             )
         }.let {
-            if (classDeclaration.typeParameters.isNotEmpty())
-                it + setOf(
-                    Import("Generic", "typing", isExternal = true, isInvariable = true),
-                    Import("TypeVar", "typing", isExternal = true, isInvariable = true)
-                )
-            else it
+            if (classDeclaration.typeParameters.isNotEmpty()) it + setOf(
+                Import("Generic", "typing", isExternal = true, isInvariable = true),
+                Import("TypeVar", "typing", isExternal = true, isInvariable = true)
+            ) else it
+        }.let {
+            if (sealedSubclasses.isNotEmpty()) it + setOf(
+                Import("Union", "typing", isExternal = true, isInvariable = true),
+            ) else it
         }
     }
 
@@ -81,12 +89,16 @@ class PythonGenerator(
             "$it = TypeVar('$it')"
         } else ""
         val generics = if (arguments.isNotEmpty()) ", Generic[${arguments.joinToString(", ")}]" else ""
-        return "${typeVar}class ${name}(BaseModel$generics):\n" +
-                properties.joinToString("\n") { (name, type) -> "    $name: $type" }
+        val body = properties.joinToString("\n") { (name, type) -> "    $name: $type" }
+        return "${typeVar}class ${name}(BaseModel$generics):\n" + body.ifEmpty { "    pass" }
     }
 
     override fun generateEnumSchema(name: String, arguments: List<String>, values: Set<String>): String {
         return "class ${name}(str, Enum):\n" + values.joinToString("\n") { name -> "    $name = '$name'" }
+    }
+
+    override fun generateUnionSchema(name: String, arguments: List<String>, values: Set<String>): String {
+        return "$name = Union[${values.joinToString(", ")}]"
     }
 
     override fun resolvePrimitiveType(kotlinType: String): Pair<String, List<Import>>? {
@@ -115,6 +127,12 @@ class PythonGenerator(
 
     override fun resolveZodableType(name: String, isGeneric: Boolean): Pair<String, List<Import>> {
         return "${name}${if (isGeneric) "[]" else ""}" to emptyList()
+    }
+
+    override fun resolveLiteralType(name: String): Pair<String, List<Import>> {
+        return "Literal[\"$name\"]" to listOf(
+            Import("Literal", "typing", isExternal = true, isInvariable = true)
+        )
     }
 
     override fun resolveGenericArgument(name: String): Pair<String, List<Import>> {
