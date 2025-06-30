@@ -140,7 +140,7 @@ abstract class ZodableGenerator(
             Import(zodImport.name, zodImport.source, true, zodImport.isInvariable)
         }.toSet()
 
-    protected fun resolveZodType(
+    private fun resolveZodType(
         prop: KSPropertyDeclaration,
         classDeclaration: KSClassDeclaration,
     ): Pair<String, List<Import>>? {
@@ -160,7 +160,7 @@ abstract class ZodableGenerator(
         return resolveZodType(prop.type.resolve(), classDeclaration)
     }
 
-    protected fun resolveZodType(type: KSType, classDeclaration: KSClassDeclaration): Pair<String, List<Import>> {
+    private fun resolveZodType(type: KSType, classDeclaration: KSClassDeclaration): Pair<String, List<Import>> {
         val isNullable = type.isMarkedNullable
         val imports = mutableListOf<Import>()
 

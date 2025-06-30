@@ -36,22 +36,29 @@ class PythonGenerator(
     }
 
     override fun resolveDefaultImports(classDeclaration: KSClassDeclaration): Set<Import> {
+        val sealedSubclasses = try {
+            classDeclaration.getSealedSubclasses().toList()
+        } catch (_: Exception) {
+            emptyList()
+        }
+
         return when (classDeclaration.classKind) {
             ClassKind.ENUM_CLASS -> setOf(
                 Import("Enum", "enum", isExternal = true, isInvariable = true, isDependency = false)
             )
 
             else -> setOf(
-                Import("Union", "typing", isExternal = true, isInvariable = true), // TODO: Use Union only when needed
                 Import("BaseModel", "pydantic", isExternal = true, isInvariable = true)
             )
         }.let {
-            if (classDeclaration.typeParameters.isNotEmpty())
-                it + setOf(
-                    Import("Generic", "typing", isExternal = true, isInvariable = true),
-                    Import("TypeVar", "typing", isExternal = true, isInvariable = true)
-                )
-            else it
+            if (classDeclaration.typeParameters.isNotEmpty()) it + setOf(
+                Import("Generic", "typing", isExternal = true, isInvariable = true),
+                Import("TypeVar", "typing", isExternal = true, isInvariable = true)
+            ) else it
+        }.let {
+            if (sealedSubclasses.isNotEmpty()) it + setOf(
+                Import("Union", "typing", isExternal = true, isInvariable = true),
+            ) else it
         }
     }
 
