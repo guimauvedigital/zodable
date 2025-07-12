@@ -10,7 +10,7 @@ import digital.guimauve.zodable.generators.PythonGenerator
 import digital.guimauve.zodable.generators.TypescriptGenerator
 import java.nio.file.Paths
 
-class ZodSchemaProcessor(
+class ZodableProcessor(
     private val env: SymbolProcessorEnvironment,
 ) : SymbolProcessor {
 
