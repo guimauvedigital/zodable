@@ -6,4 +6,5 @@ data class Import(
     val isExternal: Boolean = false,
     val isInvariable: Boolean = false,
     val isDependency: Boolean = true,
+    val dependencyVersion: String? = null,
 )

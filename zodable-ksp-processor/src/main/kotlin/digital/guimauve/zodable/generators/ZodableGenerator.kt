@@ -54,7 +54,11 @@ abstract class ZodableGenerator(
                 schemaWriter.write(generatedImports + "\n")
                 schemaWriter.write(generatedBody + "\n")
 
-                importedPackages.addAll(imports.filter { it.isExternal && it.isDependency }.map { it.source })
+                importedPackages.addAll(
+                    imports
+                        .filter { it.isExternal && it.isDependency }
+                        .map { resolveInstallName(it.source, it.dependencyVersion) }
+                )
             }
             Export(name, packageName)
         }
@@ -248,6 +252,7 @@ abstract class ZodableGenerator(
     abstract fun resolveDependenciesFile(): File
     abstract fun resolveIndexFile(sourceFolder: File): File
     abstract fun resolveClassFile(sourceFolder: File, packageName: String, name: String): File
+    abstract fun resolveInstallName(source: String, version: String?): String
     abstract fun resolveDefaultImports(classDeclaration: KSClassDeclaration): Set<Import>
     abstract fun generateImports(sourceFolder: File, currentFile: File, imports: Set<Import>): String
     abstract fun generateIndexExport(exports: Sequence<Export>): String

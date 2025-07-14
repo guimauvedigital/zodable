@@ -32,8 +32,15 @@ class TypescriptGenerator(
         return sourceFolder.resolve("$packageName/$name.ts")
     }
 
+    override fun resolveInstallName(source: String, version: String?): String {
+        return source + (version?.let { "@$it" } ?: "")
+    }
+
     override fun resolveDefaultImports(classDeclaration: KSClassDeclaration): Set<Import> {
-        return setOf(Import("z", "zod", isExternal = true, isInvariable = true))
+        return setOf(
+            // Don't support Zod 4 yet (currently breaking)
+            Import("z", "zod", isExternal = true, isInvariable = true, dependencyVersion = "^3.0.0")
+        )
     }
 
     override fun generateImports(sourceFolder: File, currentFile: File, imports: Set<Import>): String {
