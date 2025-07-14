@@ -35,6 +35,10 @@ class PythonGenerator(
         return sourceFolder.resolve("$packageName/$name.py")
     }
 
+    override fun resolveInstallName(source: String, version: String?): String {
+        return source + (version ?: "")
+    }
+
     override fun resolveDefaultImports(classDeclaration: KSClassDeclaration): Set<Import> {
         val sealedSubclasses = try {
             classDeclaration.getSealedSubclasses().toList()

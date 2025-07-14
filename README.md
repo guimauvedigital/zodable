@@ -8,7 +8,7 @@ Add the following to your `build.gradle.kts`:
 
 ```kotlin
 plugins {
-    id("digital.guimauve.zodable") version "1.6.0"
+    id("digital.guimauve.zodable") version "1.6.1"
     id("com.google.devtools.ksp") version "2.1.10-1.0.30" // Adjust version as needed
 }
 ```
