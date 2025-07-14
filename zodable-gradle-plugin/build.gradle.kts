@@ -1,7 +1,7 @@
 plugins {
     `kotlin-dsl`
     id("com.gradle.plugin-publish") version "1.2.1"
-    id("com.google.devtools.ksp") version "2.1.21-2.0.2"
+    id("com.google.devtools.ksp") version "2.1.10-1.0.30"
 }
 
 repositories {
@@ -11,13 +11,13 @@ repositories {
 
 kotlin {
     dependencies {
-        implementation("org.jetbrains.kotlin:kotlin-gradle-plugin:2.1.21")
-        implementation("com.google.devtools.ksp:com.google.devtools.ksp.gradle.plugin:2.1.21-2.0.2")
+        implementation("org.jetbrains.kotlin:kotlin-gradle-plugin:2.1.10")
+        implementation("com.google.devtools.ksp:com.google.devtools.ksp.gradle.plugin:2.1.10-1.0.30")
     }
 }
 
 group = "digital.guimauve.zodable"
-version = "1.6.2"
+version = "1.6.2-ksp1"
 
 gradlePlugin {
     website = "https://github.com/guimauvedigital/zodable"
