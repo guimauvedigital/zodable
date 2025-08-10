@@ -103,7 +103,15 @@ abstract class ZodablePlugin : Plugin<Project> {
                     ExecCommand(listOf("npm", "pkg", "set", "files[0]=src/**/*")),
                     ExecCommand(listOf("npm", "install", "typescript", "--save-dev")),
                     ExecCommand(listOf("xargs", "npm", "install"), "dependencies.txt"),
-                    ExecCommand(listOf("npx", "tsc", "--init", "-d", "--baseUrl", "./")),
+                    ExecCommand(
+                        listOf(
+                            "npx", "tsc", "--init",
+                            "-d",
+                            "--baseUrl", "./",
+                            "--isolatedModules", "false",
+                            "--verbatimModuleSyntax", "false"
+                        )
+                    ),
                     ExecCommand(listOf("npx", "tsc"))
                 ).forEach { command ->
                     exec {
