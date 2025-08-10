@@ -35,6 +35,5 @@ mavenPublishing {
 
 dependencies {
     api("com.google.devtools.ksp:symbol-processing-api:2.1.21-2.0.2")
-    api("dev.kaccelero:core:0.6.1")
     api(project(":zodable-annotations"))
 }
