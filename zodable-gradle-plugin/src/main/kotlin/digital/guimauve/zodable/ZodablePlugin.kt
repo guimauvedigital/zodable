@@ -37,6 +37,7 @@ abstract class ZodablePlugin : Plugin<Project> {
         extension.optionals.convention(Optionals.NULLISH)
         extension.packageName.convention(project.name)
         extension.packageVersion.convention(project.version.toString())
+        extension.externalPackageLocations.convention(emptyMap())
     }
 
     private fun Project.getKspConfig(): KspConfig {
@@ -93,17 +94,21 @@ abstract class ZodablePlugin : Plugin<Project> {
             commandLine = listOf("npm", "init", "-y")
 
             dependsOn(kspConfig.taskName)
+
             doLast {
-                listOf(
-                    ExecCommand(listOf("npm", "pkg", "set", "name=${extension.packageName.get()}")),
-                    ExecCommand(listOf("npm", "pkg", "set", "version=${extension.packageVersion.get()}")),
-                    ExecCommand(listOf("npm", "pkg", "set", "description=${Files.ZOD_DESCRIPTION}")),
-                    ExecCommand(listOf("npm", "pkg", "set", "main=src/index.js")),
-                    ExecCommand(listOf("npm", "pkg", "set", "types=src/index.d.ts")),
-                    ExecCommand(listOf("npm", "pkg", "set", "files[0]=src/**/*")),
-                    ExecCommand(listOf("npm", "install", "typescript", "--save-dev")),
-                    ExecCommand(listOf("xargs", "npm", "install"), "dependencies.txt"),
-                    ExecCommand(
+                buildList {
+                    add(ExecCommand(listOf("npm", "pkg", "set", "name=${extension.packageName.get()}")))
+                    add(ExecCommand(listOf("npm", "pkg", "set", "version=${extension.packageVersion.get()}")))
+                    add(ExecCommand(listOf("npm", "pkg", "set", "description=${Files.ZOD_DESCRIPTION}")))
+                    add(ExecCommand(listOf("npm", "pkg", "set", "main=src/index.js")))
+                    add(ExecCommand(listOf("npm", "pkg", "set", "types=src/index.d.ts")))
+                    add(ExecCommand(listOf("npm", "pkg", "set", "files[0]=src/**/*")))
+                    add(ExecCommand(listOf("npm", "install", "typescript", "--save-dev")))
+                    File(outputPath, "dependencies.txt").readLines().forEach { dep ->
+                        val npmPackage = extension.externalPackageLocations.get()[dep] ?: dep
+                        add(ExecCommand(listOf("npm", "install", npmPackage)))
+                    }
+                    add(ExecCommand(
                         listOf(
                             "npx", "tsc", "--init",
                             "-d",
@@ -111,9 +116,9 @@ abstract class ZodablePlugin : Plugin<Project> {
                             "--isolatedModules", "false",
                             "--verbatimModuleSyntax", "false"
                         )
-                    ),
-                    ExecCommand(listOf("npx", "tsc"))
-                ).forEach { command ->
+                    ))
+                    add(ExecCommand(listOf("npx", "tsc")))
+                }.forEach { command ->
                     exec {
                         workingDir = outputPath
                         commandLine = command.commandLine

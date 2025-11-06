@@ -152,6 +152,7 @@ zodable {
     optionals = digital.guimauve.zodable.Optionals.NULLISH // How to handle optional fields, default is NULLISH
     packageName = "my-package" // npm package name, default is the gradle project name
     packageVersion = "1.0.0" // npm package version, default is the gradle project version
+    externalPackageLocations = mapOf("package-name" to "file:/path/to/package-name") // mapping of @ZodImport package names to locations
     enableTypescript = true // Generate typescript schemas, default is true
     enablePython = false // Generate pydantic schemas, default is false
 }
