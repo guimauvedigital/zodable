@@ -8,6 +8,7 @@ import com.google.devtools.ksp.symbol.KSClassDeclaration
 import digital.guimauve.zodable.config.GeneratorConfig
 import digital.guimauve.zodable.generators.PythonGenerator
 import digital.guimauve.zodable.generators.TypescriptGenerator
+import java.io.File
 import java.nio.file.Paths
 
 class ZodableProcessor(
@@ -22,18 +23,23 @@ class ZodableProcessor(
     val coerceMapKeys = env.options["zodableCoerceMapKeys"].equals("true")
     val optionals = env.options["zodableOptionals"] ?: ""
 
+    val outputPathFile: File by lazy { Paths.get(outputPath).toFile().also { it.mkdirs() } }
+    val config by lazy { GeneratorConfig(packageName, outputPathFile, inferTypes, coerceMapKeys, optionals) }
+    val typescriptGenerator by lazy { TypescriptGenerator(env, config) }
+    val pythonGenerator by lazy {
+        val pythonOutputPath = outputPathFile.parentFile.resolve("pydantable").also { it.mkdirs() }
+        PythonGenerator(env, config.copy(outputPath = pythonOutputPath))
+    }
+
     override fun process(resolver: Resolver): List<KSAnnotated> {
         val annotatedClasses = resolver.getSymbolsWithAnnotation(Zodable::class.qualifiedName!!)
             .filterIsInstance<KSClassDeclaration>()
-        val outputPath = Paths.get(outputPath).toFile().also { it.mkdirs() }
-        val config = GeneratorConfig(packageName, outputPath, inferTypes, coerceMapKeys, optionals)
 
         if (enableTypescript) {
-            TypescriptGenerator(env, config).generateFiles(annotatedClasses)
+            typescriptGenerator.generateFiles(annotatedClasses)
         }
         if (enablePython) {
-            val pythonOutputPath = outputPath.parentFile.resolve("pydantable").also { it.mkdirs() }
-            PythonGenerator(env, config.copy(outputPath = pythonOutputPath)).generateFiles(annotatedClasses)
+            pythonGenerator.generateFiles(annotatedClasses)
         }
 
         return emptyList()

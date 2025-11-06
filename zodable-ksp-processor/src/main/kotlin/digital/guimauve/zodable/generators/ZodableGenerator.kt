@@ -8,17 +8,19 @@ import digital.guimauve.zodable.config.GeneratorConfig
 import digital.guimauve.zodable.config.Import
 import kotlinx.serialization.SerialName
 import java.io.File
+import java.io.FileOutputStream
 import java.io.OutputStreamWriter
 
 abstract class ZodableGenerator(
     protected val env: SymbolProcessorEnvironment,
     protected val config: GeneratorConfig,
 ) {
+    var round = 0
 
     fun generateFiles(annotatedClasses: Sequence<KSClassDeclaration>) {
+        val append = round++ > 0
         val sourceFolder = resolveSourceFolder().also { it.mkdirs() }
         val importedPackages = mutableSetOf<String>()
-        val indexFile = resolveIndexFile(sourceFolder).outputStream()
 
         val exports = annotatedClasses.map { classDeclaration ->
             val name = classDeclaration.simpleName.asString()
@@ -63,12 +65,13 @@ abstract class ZodableGenerator(
             Export(name, packageName)
         }
 
-        OutputStreamWriter(indexFile, Charsets.UTF_8).use { indexWriter ->
+        val indexFile = resolveIndexFile(sourceFolder)
+        OutputStreamWriter(FileOutputStream(indexFile, append), Charsets.UTF_8).use { indexWriter ->
             indexWriter.write(generateIndexExport(exports) + "\n")
         }
 
-        val dependenciesFile = resolveDependenciesFile().outputStream()
-        OutputStreamWriter(dependenciesFile, Charsets.UTF_8).use { depWriter ->
+        val dependenciesFile = resolveDependenciesFile()
+        OutputStreamWriter(FileOutputStream(dependenciesFile, append), Charsets.UTF_8).use { depWriter ->
             importedPackages.forEach { depWriter.write("$it\n") }
         }
     }
