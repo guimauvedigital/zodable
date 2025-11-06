@@ -13,6 +13,7 @@ interface ZodableExtension {
     val optionals: Property<Optionals>
     val packageName: Property<String>
     val packageVersion: Property<String>
+    val externalPackageInstallCommands: MapProperty<String, List<String>>
     val externalPackageLocations: MapProperty<String, String>
 
 }
