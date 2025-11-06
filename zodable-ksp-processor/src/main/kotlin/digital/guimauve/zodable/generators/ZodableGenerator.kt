@@ -29,6 +29,8 @@ abstract class ZodableGenerator(
             val classFile = resolveClassFile(sourceFolder, packageName, name)
             classFile.parentFile.mkdirs()
 
+            env.codeGenerator.associateByPath(listOf(classDeclaration.containingFile!!), classFile.path, extensionName())
+
             OutputStreamWriter(classFile.outputStream(), Charsets.UTF_8).use { schemaWriter ->
                 val imports = generateImports(classDeclaration).toMutableSet()
 
@@ -66,11 +68,13 @@ abstract class ZodableGenerator(
         }
 
         val indexFile = resolveIndexFile(sourceFolder)
+        env.codeGenerator.associateWithClasses(annotatedClasses.toList(), "", indexFile.name, extensionName())
         OutputStreamWriter(FileOutputStream(indexFile, append), Charsets.UTF_8).use { indexWriter ->
             indexWriter.write(generateIndexExport(exports) + "\n")
         }
 
         val dependenciesFile = resolveDependenciesFile()
+        env.codeGenerator.associateWithClasses(annotatedClasses.toList(), "", dependenciesFile.name, "txt")
         OutputStreamWriter(FileOutputStream(dependenciesFile, append), Charsets.UTF_8).use { depWriter ->
             importedPackages.forEach { depWriter.write("$it\n") }
         }
@@ -274,5 +278,6 @@ abstract class ZodableGenerator(
     abstract fun resolveUnknownType(): Pair<String, List<Import>>
     abstract fun addGenericArguments(type: String, arguments: List<String>): Pair<String, List<Import>>
     abstract fun markAsNullable(type: String): Pair<String, List<Import>>
+    abstract fun extensionName(): String
 
 }

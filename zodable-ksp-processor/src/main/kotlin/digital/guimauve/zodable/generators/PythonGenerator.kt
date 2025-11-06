@@ -156,4 +156,5 @@ class PythonGenerator(
         return "Optional[$type] = None" to listOf(Import("Optional", "typing", isExternal = true, isInvariable = true))
     }
 
+    override fun extensionName(): String = "py"
 }
