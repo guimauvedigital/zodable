@@ -37,6 +37,7 @@ abstract class ZodablePlugin : Plugin<Project> {
         extension.optionals.convention(Optionals.NULLISH)
         extension.packageName.convention(project.name)
         extension.packageVersion.convention(project.version.toString())
+        extension.additionalNpmCommands.convention(emptyList())
         extension.externalPackageInstallCommands.convention(emptyMap())
         extension.externalPackageLocations.convention(emptyMap())
     }
@@ -109,6 +110,9 @@ abstract class ZodablePlugin : Plugin<Project> {
                         val npmPackage = extension.externalPackageLocations.get()[dep] ?: dep
                         val installCommand = extension.externalPackageInstallCommands.get()[dep] ?: listOf("npm", "install")
                         add(ExecCommand(installCommand + npmPackage))
+                    }
+                    extension.additionalNpmCommands.get()?.forEach { cmd ->
+                        add(ExecCommand(cmd))
                     }
                     add(ExecCommand(
                         listOf(
