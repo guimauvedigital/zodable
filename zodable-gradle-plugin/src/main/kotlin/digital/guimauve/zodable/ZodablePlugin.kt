@@ -108,8 +108,8 @@ abstract class ZodablePlugin : Plugin<Project> {
                     add(ExecCommand(listOf("npm", "install", "typescript", "--save-dev")))
                     File(outputPath, "dependencies.txt").readLines().forEach { dep ->
                         val npmPackage = extension.externalPackageLocations.get()[dep] ?: dep
-                        val installCommand = extension.externalPackageInstallCommands.get()[dep] ?: listOf("npm", "install")
-                        add(ExecCommand(installCommand + npmPackage))
+                        val installCommand = extension.externalPackageInstallCommands.get()[dep] ?: listOf("npm", "install", npmPackage)
+                        add(ExecCommand(installCommand))
                     }
                     extension.additionalNpmCommands.get()?.forEach { cmd ->
                         add(ExecCommand(cmd))
