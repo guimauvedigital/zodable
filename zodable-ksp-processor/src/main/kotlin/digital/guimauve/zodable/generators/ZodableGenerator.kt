@@ -168,6 +168,25 @@ abstract class ZodableGenerator(
         val isNullable = type.isMarkedNullable
         val imports = mutableListOf<Import>()
 
+        // Check if this is a value class and resolve to its underlying type
+        val typeDeclaration = type.declaration as? KSClassDeclaration
+        if (typeDeclaration != null && typeDeclaration.modifiers.contains(Modifier.VALUE) && config.valueClassUnwrap) {
+            val valueClassProperty = typeDeclaration.getAllProperties()
+                .firstOrNull { it.hasBackingField }
+
+            if (valueClassProperty != null) {
+                val underlyingType = valueClassProperty.type.resolve()
+                // Recursively resolve the underlying type, preserving nullability
+                val (resolvedType, resolvedImports) = resolveZodType(underlyingType, classDeclaration)
+                return if (isNullable) {
+                    val (nullableType, nullableImports) = markAsNullable(resolvedType)
+                    nullableType to (resolvedImports + nullableImports)
+                } else {
+                    resolvedType to resolvedImports
+                }
+            }
+        }
+
         val (arguments, argumentImports) = type.arguments.map {
             val argument = it.type?.resolve() ?: return@map resolveUnknownType()
             resolveZodType(argument, classDeclaration)

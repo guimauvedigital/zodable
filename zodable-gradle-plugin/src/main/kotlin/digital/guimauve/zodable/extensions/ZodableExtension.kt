@@ -12,5 +12,6 @@ interface ZodableExtension {
     val optionals: Property<Optionals>
     val packageName: Property<String>
     val packageVersion: Property<String>
+    val valueClassUnwrap: Property<Boolean>
 
 }
