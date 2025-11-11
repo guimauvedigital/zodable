@@ -170,7 +170,7 @@ abstract class ZodableGenerator(
 
         // Check if this is a value class and resolve to its underlying type
         val typeDeclaration = type.declaration as? KSClassDeclaration
-        if (typeDeclaration != null && typeDeclaration.modifiers.contains(Modifier.VALUE) && config.valueClassUnwrap) {
+        if (typeDeclaration != null && typeDeclaration.isValueClass() && config.valueClassUnwrap) {
             val valueClassProperty = typeDeclaration.getAllProperties()
                 .firstOrNull { it.hasBackingField }
 
@@ -264,6 +264,11 @@ abstract class ZodableGenerator(
         return SerialName(
             value = args["value"]?.value as? String ?: "*",
         )
+    }
+
+    private fun KSClassDeclaration.isValueClass(): Boolean {
+        // when ksp runs against a compiled lib, it sees it as INLINE, not VALUE because of the JVM bytecode representation
+        return modifiers.contains(Modifier.VALUE) || modifiers.contains(Modifier.INLINE)
     }
 
     abstract fun shouldKeepAnnotation(annotation: String, filter: String): Boolean
