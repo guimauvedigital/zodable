@@ -8,4 +8,5 @@ data class GeneratorConfig(
     val inferTypes: Boolean,
     val coerceMapKeys: Boolean,
     val optionals: String,
+    val valueClassUnwrap: Boolean,
 )

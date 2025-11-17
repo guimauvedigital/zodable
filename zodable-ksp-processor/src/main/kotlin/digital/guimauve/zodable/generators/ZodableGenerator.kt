@@ -168,6 +168,25 @@ abstract class ZodableGenerator(
         val isNullable = type.isMarkedNullable
         val imports = mutableListOf<Import>()
 
+        // Check if this is a value class and resolve to its underlying type
+        val typeDeclaration = type.declaration as? KSClassDeclaration
+        if (typeDeclaration != null && typeDeclaration.isValueClass() && config.valueClassUnwrap) {
+            val valueClassProperty = typeDeclaration.getAllProperties()
+                .firstOrNull { it.hasBackingField }
+
+            if (valueClassProperty != null) {
+                val underlyingType = valueClassProperty.type.resolve()
+                // Recursively resolve the underlying type, preserving nullability
+                val (resolvedType, resolvedImports) = resolveZodType(underlyingType, classDeclaration)
+                return if (isNullable) {
+                    val (nullableType, nullableImports) = markAsNullable(resolvedType)
+                    nullableType to (resolvedImports + nullableImports)
+                } else {
+                    resolvedType to resolvedImports
+                }
+            }
+        }
+
         val (arguments, argumentImports) = type.arguments.map {
             val argument = it.type?.resolve() ?: return@map resolveUnknownType()
             resolveZodType(argument, classDeclaration)
@@ -245,6 +264,11 @@ abstract class ZodableGenerator(
         return SerialName(
             value = args["value"]?.value as? String ?: "*",
         )
+    }
+
+    private fun KSClassDeclaration.isValueClass(): Boolean {
+        // when ksp runs against a compiled lib, it sees it as INLINE, not VALUE because of the JVM bytecode representation
+        return modifiers.contains(Modifier.VALUE) || modifiers.contains(Modifier.INLINE)
     }
 
     abstract fun shouldKeepAnnotation(annotation: String, filter: String): Boolean

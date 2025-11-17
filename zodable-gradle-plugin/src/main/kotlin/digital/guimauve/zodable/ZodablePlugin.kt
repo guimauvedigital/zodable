@@ -37,6 +37,7 @@ abstract class ZodablePlugin : Plugin<Project> {
         extension.optionals.convention(Optionals.NULLISH)
         extension.packageName.convention(project.name)
         extension.packageVersion.convention(project.version.toString())
+        extension.valueClassUnwrap.convention(true)
     }
 
     private fun Project.getKspConfig(): KspConfig {
@@ -77,6 +78,7 @@ abstract class ZodablePlugin : Plugin<Project> {
                 arg("zodableInferTypes", extension.inferTypes.get().toString())
                 arg("zodableCoerceMapKeys", extension.coerceMapKeys.get().toString())
                 arg("zodableOptionals", extension.optionals.get().zodType)
+                arg("zodableValueClassUnwrap", extension.valueClassUnwrap.get().toString())
             }
         }
     }
