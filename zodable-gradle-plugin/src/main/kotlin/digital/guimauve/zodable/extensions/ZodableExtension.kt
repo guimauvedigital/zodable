@@ -17,5 +17,6 @@ interface ZodableExtension {
     val additionalNpmCommands: ListProperty<List<String>>
     val externalPackageInstallCommands: MapProperty<String, List<String>>
     val externalPackageLocations: MapProperty<String, String>
+    val valueClassUnwrap: Property<Boolean>
 
 }

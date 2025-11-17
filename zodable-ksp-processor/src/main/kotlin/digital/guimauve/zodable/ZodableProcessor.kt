@@ -21,12 +21,13 @@ class ZodableProcessor(
     val inferTypes = env.options["zodableInferTypes"].equals("true")
     val coerceMapKeys = env.options["zodableCoerceMapKeys"].equals("true")
     val optionals = env.options["zodableOptionals"] ?: ""
+    val valueClassUnwrap = env.options["zodableValueClassUnwrap"].equals("true")
 
     override fun process(resolver: Resolver): List<KSAnnotated> {
         val annotatedClasses = resolver.getSymbolsWithAnnotation(Zodable::class.qualifiedName!!)
             .filterIsInstance<KSClassDeclaration>()
         val outputPath = Paths.get(outputPath).toFile().also { it.mkdirs() }
-        val config = GeneratorConfig(packageName, outputPath, inferTypes, coerceMapKeys, optionals)
+        val config = GeneratorConfig(packageName, outputPath, inferTypes, coerceMapKeys, optionals, valueClassUnwrap)
 
         if (enableTypescript) {
             TypescriptGenerator(env, config).generateFiles(annotatedClasses)

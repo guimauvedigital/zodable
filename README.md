@@ -158,6 +158,7 @@ zodable {
     externalPackageInstallCommands = mapOf("package-name" to listOf("yalc", "add"))
     // mapping of @ZodImport package names to locations
     externalPackageLocations = mapOf("package-name" to "file:/path/to/package-name")
+    valueClassUnwrap = true // whether to unwrap properties with value class types, default is true
     enableTypescript = true // Generate typescript schemas, default is true
     enablePython = false // Generate pydantic schemas, default is false
 }

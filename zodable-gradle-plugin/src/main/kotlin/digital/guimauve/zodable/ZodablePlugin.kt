@@ -40,6 +40,7 @@ abstract class ZodablePlugin : Plugin<Project> {
         extension.additionalNpmCommands.convention(emptyList())
         extension.externalPackageInstallCommands.convention(emptyMap())
         extension.externalPackageLocations.convention(emptyMap())
+        extension.valueClassUnwrap.convention(true)
     }
 
     private fun Project.getKspConfig(): KspConfig {
@@ -80,6 +81,7 @@ abstract class ZodablePlugin : Plugin<Project> {
                 arg("zodableInferTypes", extension.inferTypes.get().toString())
                 arg("zodableCoerceMapKeys", extension.coerceMapKeys.get().toString())
                 arg("zodableOptionals", extension.optionals.get().zodType)
+                arg("zodableValueClassUnwrap", extension.valueClassUnwrap.get().toString())
             }
         }
     }
