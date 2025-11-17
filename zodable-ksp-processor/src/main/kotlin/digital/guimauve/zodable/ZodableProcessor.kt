@@ -22,9 +22,10 @@ class ZodableProcessor(
     val inferTypes = env.options["zodableInferTypes"].equals("true")
     val coerceMapKeys = env.options["zodableCoerceMapKeys"].equals("true")
     val optionals = env.options["zodableOptionals"] ?: ""
+    val valueClassUnwrap = env.options["zodableValueClassUnwrap"].equals("true")
 
     val outputPathFile: File by lazy { Paths.get(outputPath).toFile().also { it.mkdirs() } }
-    val config by lazy { GeneratorConfig(packageName, outputPathFile, inferTypes, coerceMapKeys, optionals) }
+    val config by lazy { GeneratorConfig(packageName, outputPathFile, inferTypes, coerceMapKeys, optionals, valueClassUnwrap) }
     val typescriptGenerator by lazy { TypescriptGenerator(env, config) }
     val pythonGenerator by lazy {
         val pythonOutputPath = outputPathFile.parentFile.resolve("pydantable").also { it.mkdirs() }
