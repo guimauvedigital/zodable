@@ -14,7 +14,7 @@ import java.io.File
 
 abstract class ZodablePlugin : Plugin<Project> {
 
-    private val zodableVersion = "1.6.2"
+    private val zodableVersion = "1.7.0"
 
     override fun apply(project: Project) {
         val outputPath = project.file("build/zodable")
@@ -110,21 +110,24 @@ abstract class ZodablePlugin : Plugin<Project> {
                     add(ExecCommand(listOf("npm", "install", "typescript", "--save-dev")))
                     File(outputPath, "dependencies.txt").readLines().forEach { dep ->
                         val npmPackage = extension.externalPackageLocations.get()[dep] ?: dep
-                        val installCommand = extension.externalPackageInstallCommands.get()[dep] ?: listOf("npm", "install", npmPackage)
+                        val installCommand =
+                            extension.externalPackageInstallCommands.get()[dep] ?: listOf("npm", "install", npmPackage)
                         add(ExecCommand(installCommand))
                     }
                     extension.additionalNpmCommands.get()?.forEach { cmd ->
                         add(ExecCommand(cmd))
                     }
-                    add(ExecCommand(
-                        listOf(
-                            "npx", "tsc", "--init",
-                            "-d",
-                            "--baseUrl", "./",
-                            "--isolatedModules", "false",
-                            "--verbatimModuleSyntax", "false"
+                    add(
+                        ExecCommand(
+                            listOf(
+                                "npx", "tsc", "--init",
+                                "-d",
+                                "--baseUrl", "./",
+                                "--isolatedModules", "false",
+                                "--verbatimModuleSyntax", "false"
+                            )
                         )
-                    ))
+                    )
                     add(ExecCommand(listOf("npx", "tsc")))
                 }.forEach { command ->
                     exec {
