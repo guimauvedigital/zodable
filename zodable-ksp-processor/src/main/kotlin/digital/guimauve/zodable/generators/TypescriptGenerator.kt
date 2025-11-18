@@ -129,8 +129,14 @@ class TypescriptGenerator(
                 Import("KotlinPairSchema", "zodable-kotlin-primitives", isExternal = true, isInvariable = true)
             )
 
-            "kotlinx.datetime.Instant", "kotlinx.datetime.LocalDateTime", "kotlinx.datetime.LocalDate" -> "z.coerce.date()" to emptyList()
-            "dev.kaccelero.models.UUID" -> "z.string().uuid()" to emptyList()
+            "kotlin.time.Instant",
+            "kotlinx.datetime.Instant",
+            "kotlinx.datetime.LocalDateTime",
+            "kotlinx.datetime.LocalDate" -> "z.coerce.date()" to emptyList()
+
+            "dev.kaccelero.models.UUID",
+            "kotlin.uuid.Uuid" -> "z.string().uuid()" to emptyList()
+
             "kotlin.collections.List" -> "z.array()" to emptyList()
             "kotlin.collections.Map" -> "z.record()" to emptyList()
             else -> null
@@ -177,4 +183,5 @@ class TypescriptGenerator(
         return "$type${config.optionals}" to emptyList()
     }
 
+    override fun extensionName(): String = "ts"
 }

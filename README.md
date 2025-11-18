@@ -8,7 +8,7 @@ Add the following to your `build.gradle.kts`:
 
 ```kotlin
 plugins {
-    id("digital.guimauve.zodable") version "1.6.2"
+    id("digital.guimauve.zodable") version "1.7.0"
     id("com.google.devtools.ksp") version "2.1.21-2.0.2" // Adjust version as needed
 }
 ```
@@ -17,7 +17,7 @@ Or if you are using KSP 1:
 
 ```kotlin
 plugins {
-    id("digital.guimauve.zodable") version "1.6.2-ksp1"
+    id("digital.guimauve.zodable") version "1.7.0-ksp1"
     id("com.google.devtools.ksp") version "2.1.10-1.0.30"
 }
 ```
@@ -152,6 +152,13 @@ zodable {
     optionals = digital.guimauve.zodable.Optionals.NULLISH // How to handle optional fields, default is NULLISH
     packageName = "my-package" // npm package name, default is the gradle project name
     packageVersion = "1.0.0" // npm package version, default is the gradle project version
+    // additional npm commands to be executed to affect the generated zodable package
+    additionalNpmCommands = listOf(listOf("npm", "pkg", "set", "files[1]=.yalc/**/*"))
+    // mapping of @ZodImport package names to install commands
+    externalPackageInstallCommands = mapOf("package-name" to listOf("yalc", "add"))
+    // mapping of @ZodImport package names to locations
+    externalPackageLocations = mapOf("package-name" to "file:/path/to/package-name")
+    valueClassUnwrap = true // whether to unwrap properties with value class types, default is true
     enableTypescript = true // Generate typescript schemas, default is true
     enablePython = false // Generate pydantic schemas, default is false
 }

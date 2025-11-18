@@ -115,11 +115,15 @@ class PythonGenerator(
                 Import("KotlinPair", "zodable-kotlin-primitives", isExternal = true, isInvariable = true)
             )
 
-            "kotlinx.datetime.Instant", "kotlinx.datetime.LocalDateTime", "kotlinx.datetime.LocalDate" -> "datetime" to listOf(
+            "kotlin.time.Instant",
+            "kotlinx.datetime.Instant",
+            "kotlinx.datetime.LocalDateTime",
+            "kotlinx.datetime.LocalDate" -> "datetime" to listOf(
                 Import("datetime", "datetime", isExternal = true, isInvariable = true)
             )
 
-            "dev.kaccelero.models.UUID" -> "UUID" to listOf(
+            "dev.kaccelero.models.UUID",
+            "kotlin.uuid.Uuid" -> "UUID" to listOf(
                 Import("UUID", "uuid", isExternal = true, isInvariable = true)
             )
 
@@ -156,4 +160,5 @@ class PythonGenerator(
         return "Optional[$type] = None" to listOf(Import("Optional", "typing", isExternal = true, isInvariable = true))
     }
 
+    override fun extensionName(): String = "py"
 }

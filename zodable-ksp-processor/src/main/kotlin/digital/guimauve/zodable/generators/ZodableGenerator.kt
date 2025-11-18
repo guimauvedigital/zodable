@@ -8,17 +8,19 @@ import digital.guimauve.zodable.config.GeneratorConfig
 import digital.guimauve.zodable.config.Import
 import kotlinx.serialization.SerialName
 import java.io.File
+import java.io.FileOutputStream
 import java.io.OutputStreamWriter
 
 abstract class ZodableGenerator(
     protected val env: SymbolProcessorEnvironment,
     protected val config: GeneratorConfig,
 ) {
+    var round = 0
 
     fun generateFiles(annotatedClasses: Sequence<KSClassDeclaration>) {
+        val append = round++ > 0
         val sourceFolder = resolveSourceFolder().also { it.mkdirs() }
         val importedPackages = mutableSetOf<String>()
-        val indexFile = resolveIndexFile(sourceFolder).outputStream()
 
         val exports = annotatedClasses.map { classDeclaration ->
             val name = classDeclaration.simpleName.asString()
@@ -26,6 +28,8 @@ abstract class ZodableGenerator(
             val arguments = classDeclaration.typeParameters.map { it.name.asString() }
             val classFile = resolveClassFile(sourceFolder, packageName, name)
             classFile.parentFile.mkdirs()
+
+            env.codeGenerator.associateByPath(listOf(classDeclaration.containingFile!!), classFile.path, extensionName())
 
             OutputStreamWriter(classFile.outputStream(), Charsets.UTF_8).use { schemaWriter ->
                 val imports = generateImports(classDeclaration).toMutableSet()
@@ -63,12 +67,15 @@ abstract class ZodableGenerator(
             Export(name, packageName)
         }
 
-        OutputStreamWriter(indexFile, Charsets.UTF_8).use { indexWriter ->
+        val indexFile = resolveIndexFile(sourceFolder)
+        env.codeGenerator.associateWithClasses(annotatedClasses.toList(), "", indexFile.name, extensionName())
+        OutputStreamWriter(FileOutputStream(indexFile, append), Charsets.UTF_8).use { indexWriter ->
             indexWriter.write(generateIndexExport(exports) + "\n")
         }
 
-        val dependenciesFile = resolveDependenciesFile().outputStream()
-        OutputStreamWriter(dependenciesFile, Charsets.UTF_8).use { depWriter ->
+        val dependenciesFile = resolveDependenciesFile()
+        env.codeGenerator.associateWithClasses(annotatedClasses.toList(), "", dependenciesFile.name, "txt")
+        OutputStreamWriter(FileOutputStream(dependenciesFile, append), Charsets.UTF_8).use { depWriter ->
             importedPackages.forEach { depWriter.write("$it\n") }
         }
     }
@@ -168,6 +175,25 @@ abstract class ZodableGenerator(
         val isNullable = type.isMarkedNullable
         val imports = mutableListOf<Import>()
 
+        // Check if this is a value class and resolve to its underlying type
+        val typeDeclaration = type.declaration as? KSClassDeclaration
+        if (typeDeclaration != null && typeDeclaration.isValueClass() && config.valueClassUnwrap) {
+            val valueClassProperty = typeDeclaration.getAllProperties()
+                .firstOrNull { it.hasBackingField }
+
+            if (valueClassProperty != null) {
+                val underlyingType = valueClassProperty.type.resolve()
+                // Recursively resolve the underlying type, preserving nullability
+                val (resolvedType, resolvedImports) = resolveZodType(underlyingType, classDeclaration)
+                return if (isNullable) {
+                    val (nullableType, nullableImports) = markAsNullable(resolvedType)
+                    nullableType to (resolvedImports + nullableImports)
+                } else {
+                    resolvedType to resolvedImports
+                }
+            }
+        }
+
         val (arguments, argumentImports) = type.arguments.map {
             val argument = it.type?.resolve() ?: return@map resolveUnknownType()
             resolveZodType(argument, classDeclaration)
@@ -186,7 +212,7 @@ abstract class ZodableGenerator(
                 resolveGenericArgument(type.declaration.simpleName.asString())
             } else {
                 val unknownType = resolveUnknownType()
-                env.logger.warn("Unsupported type ${type.declaration.simpleName.asString()}, using ${unknownType.first}")
+                env.logger.warn("Unsupported type ${type.declaration.simpleName.asString()} in class ${classDeclaration.qualifiedName?.asString()}, using ${unknownType.first}")
                 unknownType
             }
         }()
@@ -247,6 +273,11 @@ abstract class ZodableGenerator(
         )
     }
 
+    private fun KSClassDeclaration.isValueClass(): Boolean {
+        // when ksp runs against a compiled lib, it sees it as INLINE, not VALUE because of the JVM bytecode representation
+        return modifiers.contains(Modifier.VALUE) || modifiers.contains(Modifier.INLINE)
+    }
+
     abstract fun shouldKeepAnnotation(annotation: String, filter: String): Boolean
     abstract fun resolveSourceFolder(): File
     abstract fun resolveDependenciesFile(): File
@@ -271,5 +302,6 @@ abstract class ZodableGenerator(
     abstract fun resolveUnknownType(): Pair<String, List<Import>>
     abstract fun addGenericArguments(type: String, arguments: List<String>): Pair<String, List<Import>>
     abstract fun markAsNullable(type: String): Pair<String, List<Import>>
+    abstract fun extensionName(): String
 
 }

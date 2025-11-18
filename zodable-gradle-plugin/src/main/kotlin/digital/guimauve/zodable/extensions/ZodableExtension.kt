@@ -1,6 +1,8 @@
 package digital.guimauve.zodable.extensions
 
 import digital.guimauve.zodable.Optionals
+import org.gradle.api.provider.ListProperty
+import org.gradle.api.provider.MapProperty
 import org.gradle.api.provider.Property
 
 interface ZodableExtension {
@@ -12,5 +14,9 @@ interface ZodableExtension {
     val optionals: Property<Optionals>
     val packageName: Property<String>
     val packageVersion: Property<String>
+    val additionalNpmCommands: ListProperty<List<String>>
+    val externalPackageInstallCommands: MapProperty<String, List<String>>
+    val externalPackageLocations: MapProperty<String, String>
+    val valueClassUnwrap: Property<Boolean>
 
 }
