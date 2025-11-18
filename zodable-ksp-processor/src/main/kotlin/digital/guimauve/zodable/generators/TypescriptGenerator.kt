@@ -183,4 +183,5 @@ class TypescriptGenerator(
         return "$type${config.optionals}" to emptyList()
     }
 
+    override fun extensionName(): String = "ts"
 }

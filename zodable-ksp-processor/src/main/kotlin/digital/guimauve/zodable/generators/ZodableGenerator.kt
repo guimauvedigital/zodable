@@ -8,17 +8,19 @@ import digital.guimauve.zodable.config.GeneratorConfig
 import digital.guimauve.zodable.config.Import
 import kotlinx.serialization.SerialName
 import java.io.File
+import java.io.FileOutputStream
 import java.io.OutputStreamWriter
 
 abstract class ZodableGenerator(
     protected val env: SymbolProcessorEnvironment,
     protected val config: GeneratorConfig,
 ) {
+    var round = 0
 
     fun generateFiles(annotatedClasses: Sequence<KSClassDeclaration>) {
+        val append = round++ > 0
         val sourceFolder = resolveSourceFolder().also { it.mkdirs() }
         val importedPackages = mutableSetOf<String>()
-        val indexFile = resolveIndexFile(sourceFolder).outputStream()
 
         val exports = annotatedClasses.map { classDeclaration ->
             val name = classDeclaration.simpleName.asString()
@@ -26,6 +28,8 @@ abstract class ZodableGenerator(
             val arguments = classDeclaration.typeParameters.map { it.name.asString() }
             val classFile = resolveClassFile(sourceFolder, packageName, name)
             classFile.parentFile.mkdirs()
+
+            env.codeGenerator.associateByPath(listOf(classDeclaration.containingFile!!), classFile.path, extensionName())
 
             OutputStreamWriter(classFile.outputStream(), Charsets.UTF_8).use { schemaWriter ->
                 val imports = generateImports(classDeclaration).toMutableSet()
@@ -63,12 +67,15 @@ abstract class ZodableGenerator(
             Export(name, packageName)
         }
 
-        OutputStreamWriter(indexFile, Charsets.UTF_8).use { indexWriter ->
+        val indexFile = resolveIndexFile(sourceFolder)
+        env.codeGenerator.associateWithClasses(annotatedClasses.toList(), "", indexFile.name, extensionName())
+        OutputStreamWriter(FileOutputStream(indexFile, append), Charsets.UTF_8).use { indexWriter ->
             indexWriter.write(generateIndexExport(exports) + "\n")
         }
 
-        val dependenciesFile = resolveDependenciesFile().outputStream()
-        OutputStreamWriter(dependenciesFile, Charsets.UTF_8).use { depWriter ->
+        val dependenciesFile = resolveDependenciesFile()
+        env.codeGenerator.associateWithClasses(annotatedClasses.toList(), "", dependenciesFile.name, "txt")
+        OutputStreamWriter(FileOutputStream(dependenciesFile, append), Charsets.UTF_8).use { depWriter ->
             importedPackages.forEach { depWriter.write("$it\n") }
         }
     }
@@ -295,5 +302,6 @@ abstract class ZodableGenerator(
     abstract fun resolveUnknownType(): Pair<String, List<Import>>
     abstract fun addGenericArguments(type: String, arguments: List<String>): Pair<String, List<Import>>
     abstract fun markAsNullable(type: String): Pair<String, List<Import>>
+    abstract fun extensionName(): String
 
 }
