@@ -90,11 +90,41 @@ abstract class ZodablePlugin : Plugin<Project> {
         val extension = extensions.getByType<ZodableExtension>()
         val kspConfig = getKspConfig()
 
+        // typescript
+        val srcDir = outputPath.resolve("src")
+        val dependenciesFile = outputPath.resolve("dependencies.txt")
+
+        // python
+        val pythonOutputPath = outputPath.parentFile.resolve("pydantable")
+        val pythonSrcDir = extension.packageName.get().pythonCompatible()
+        val resolvedPythonSrcDir = pythonOutputPath.resolve(pythonSrcDir)
+        val requirementsFile = pythonOutputPath.resolve("requirements.txt")
+
+        // ensure we set the src dir and dependencies file as outputs of the ksp task for proper ordering
+        // and gradle output tracking
+        tasks.configureEach {
+          if (name == kspConfig.taskName) {
+            outputs.dir(srcDir)
+            outputs.dir(resolvedPythonSrcDir)
+            outputs.file(dependenciesFile)
+            outputs.file(requirementsFile)
+          }
+        }
+
         val setupZodablePackage = tasks.register<Exec>("setupZodablePackage") {
             group = "build"
             description = "Setup zodable npm package"
 
             workingDir = outputPath
+
+            // define the gradle plugin input and output dependencies
+            inputs.dir(srcDir)
+            inputs.file(dependenciesFile)
+            outputs.file(outputPath.resolve("package.json"))
+            outputs.dir(outputPath.resolve("node_modules"))
+            outputs.file(outputPath.resolve("package-lock.json"))
+            outputs.file(outputPath.resolve("tsconfig.json"))
+
             commandLine = listOf("npm", "init", "-y")
 
             dependsOn(kspConfig.taskName)
@@ -141,7 +171,6 @@ abstract class ZodablePlugin : Plugin<Project> {
             }
         }
         val setupPydantablePackage = tasks.register<Exec>("setupPydantablePackage") {
-            val pythonOutputPath = outputPath.parentFile.resolve("pydantable")
             val venvPath = pythonOutputPath.resolve(".venv")
             val pythonExec = venvPath.resolve("bin/python").absolutePath
             val pipExec = venvPath.resolve("bin/pip").absolutePath
@@ -150,9 +179,19 @@ abstract class ZodablePlugin : Plugin<Project> {
             description = "Setup zodable pypi package"
 
             workingDir = pythonOutputPath
+
+            // define the gradle plugin input and output dependencies
+            inputs.dir(resolvedPythonSrcDir)
+            inputs.file(requirementsFile)
+            outputs.dir(pythonOutputPath.resolve("dist"))
+            outputs.dir(pythonOutputPath.resolve(".venv"))
+            outputs.file(pythonOutputPath.resolve("pyproject.toml"))
+            outputs.file(pythonOutputPath.resolve("$pythonSrcDir.egg-info"))
+
             commandLine = listOf("python3", "-m", "venv", ".venv")
 
             dependsOn(kspConfig.taskName)
+
             doLast {
                 listOf(
                     ExecCommand(listOf(pipExec, "install", "-r", "requirements.txt")),
@@ -165,9 +204,9 @@ abstract class ZodablePlugin : Plugin<Project> {
                             )
                         )
                     ),
-                    ExecCommand(listOf("touch", "${extension.packageName.get().pythonCompatible()}/py.typed")),
+                    ExecCommand(listOf("touch", "$pythonSrcDir/py.typed")),
                     ExecCommand(listOf(pipExec, "install", "mypy", "build", "twine")),
-                    ExecCommand(listOf(pythonExec, "-m", "mypy", extension.packageName.get().pythonCompatible())),
+                    ExecCommand(listOf(pythonExec, "-m", "mypy", pythonSrcDir)),
                     ExecCommand(listOf(pythonExec, "-m", "build")),
                 ).forEach { command ->
                     exec {
