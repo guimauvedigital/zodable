@@ -75,7 +75,7 @@ kotlin {
     sourceSets {
         val commonMain by getting {
             dependencies {
-                api("dev.kaccelero:core:0.6.4")
+                api("org.jetbrains.kotlinx:kotlinx-serialization-json:1.9.0")
             }
         }
     }

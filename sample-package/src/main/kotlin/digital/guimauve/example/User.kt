@@ -1,21 +1,24 @@
 package digital.guimauve.example
 
-import dev.kaccelero.models.UUID
 import digital.guimauve.zodable.ZodIgnore
 import digital.guimauve.zodable.ZodImport
 import digital.guimauve.zodable.ZodType
 import digital.guimauve.zodable.Zodable
-import kotlinx.datetime.Instant
 import kotlinx.datetime.LocalDate
 import kotlinx.datetime.LocalDateTime
 import kotlinx.serialization.SerialName
+import kotlin.time.ExperimentalTime
+import kotlin.time.Instant
+import kotlin.uuid.ExperimentalUuidApi
+import kotlin.uuid.Uuid
 
 @ZodImport("IdSchema", "zodable-idschema", isInvariable = true)
 @ZodImport("MultiplatformUser", "zodable-sample-package-multiplatform")
 
+@OptIn(ExperimentalUuidApi::class, ExperimentalTime::class)
 @Zodable
 data class User(
-    val id: UUID,
+    val id: Uuid,
     val name: String,
     val email: String?,
     val followers: Int,
@@ -30,7 +33,7 @@ data class User(
     val daytime: LocalDateTime,
     val externalUser: MultiplatformUser,
     @ZodType("z.date()", "ts") @ZodType("datetime", "py") val birthDate: String, // Custom mapping
-    @ZodType("IdSchema") val otherId: UUID,
+    @ZodType("IdSchema") val otherId: Uuid,
     @ZodIgnore val ignored: String, // Ignored property
     @SerialName("custom_name") val customName: String, // Custom serialization name
     val message: Message<String>,
