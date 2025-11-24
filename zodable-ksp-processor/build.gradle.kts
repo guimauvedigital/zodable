@@ -34,6 +34,6 @@ mavenPublishing {
 }
 
 dependencies {
-    api("com.google.devtools.ksp:symbol-processing-api:2.1.21-2.0.2")
+    api("com.google.devtools.ksp:symbol-processing-api:2.2.20-2.0.4")
     api(project(":zodable-annotations"))
 }

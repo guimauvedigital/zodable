@@ -6,6 +6,7 @@ plugins {
 
 dependencies {
     api(project(":sample-package-multiplatform"))
+    api("org.jetbrains.kotlinx:kotlinx-datetime:0.7.1")
 }
 
 zodable {
