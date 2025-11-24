@@ -14,7 +14,7 @@ import java.io.File
 
 abstract class ZodablePlugin : Plugin<Project> {
 
-    private val zodableVersion = "1.7.0"
+    private val zodableVersion = "1.7.1"
 
     override fun apply(project: Project) {
         val outputPath = project.file("build/zodable")
@@ -103,12 +103,12 @@ abstract class ZodablePlugin : Plugin<Project> {
         // ensure we set the src dir and dependencies file as outputs of the ksp task for proper ordering
         // and gradle output tracking
         tasks.configureEach {
-          if (name == kspConfig.taskName) {
-            outputs.dir(srcDir)
-            outputs.dir(resolvedPythonSrcDir)
-            outputs.file(dependenciesFile)
-            outputs.file(requirementsFile)
-          }
+            if (name == kspConfig.taskName) {
+                outputs.dir(srcDir)
+                outputs.dir(resolvedPythonSrcDir)
+                outputs.file(dependenciesFile)
+                outputs.file(requirementsFile)
+            }
         }
 
         val setupZodablePackage = tasks.register<Exec>("setupZodablePackage") {
