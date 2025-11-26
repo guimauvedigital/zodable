@@ -1,11 +1,12 @@
 package digital.guimauve.example
 
-import dev.kaccelero.models.IModel
-import dev.kaccelero.models.UUID
 import digital.guimauve.zodable.Zodable
+import kotlin.uuid.ExperimentalUuidApi
+import kotlin.uuid.Uuid
 
+@OptIn(ExperimentalUuidApi::class)
 @Zodable
 data class MyModel(
-    override val id: UUID,
+    val id: Uuid,
     val name: String,
-) : IModel<UUID, Unit, Unit>
+)

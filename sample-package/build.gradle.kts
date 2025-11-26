@@ -12,5 +12,5 @@ dependencies {
 zodable {
     packageName = "zodable-sample-package"
     enablePython = true // Default is false
-    valueClassUnwrap = false
+    valueClassUnwrap = true
 }
