@@ -153,8 +153,8 @@ abstract class ZodablePlugin : Plugin<Project> {
                             listOf(
                                 "npx", "tsc", "--init",
                                 "-d",
-                                "--module", "ES2020",
-                                "--moduleResolution", "node",
+                                "--module", "esnext",
+                                "--moduleResolution", "bundler",
                                 "--baseUrl", "./",
                                 "--isolatedModules", "false",
                                 "--verbatimModuleSyntax", "false"
