@@ -134,6 +134,7 @@ abstract class ZodablePlugin : Plugin<Project> {
                     add(ExecCommand(listOf("npm", "pkg", "set", "name=${extension.packageName.get()}")))
                     add(ExecCommand(listOf("npm", "pkg", "set", "version=${extension.packageVersion.get()}")))
                     add(ExecCommand(listOf("npm", "pkg", "set", "description=${Files.ZOD_DESCRIPTION}")))
+                    add(ExecCommand(listOf("npm", "pkg", "set", "type=module")))
                     add(ExecCommand(listOf("npm", "pkg", "set", "main=src/index.js")))
                     add(ExecCommand(listOf("npm", "pkg", "set", "types=src/index.d.ts")))
                     add(ExecCommand(listOf("npm", "pkg", "set", "files[0]=src/**/*")))
@@ -152,6 +153,8 @@ abstract class ZodablePlugin : Plugin<Project> {
                             listOf(
                                 "npx", "tsc", "--init",
                                 "-d",
+                                "--module", "esnext",
+                                "--moduleResolution", "bundler",
                                 "--baseUrl", "./",
                                 "--isolatedModules", "false",
                                 "--verbatimModuleSyntax", "false"
