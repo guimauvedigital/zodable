@@ -88,7 +88,11 @@ abstract class ZodableGenerator(
         val values = classDeclaration.declarations.filterIsInstance<KSClassDeclaration>()
             .map { it.simpleName.asString() }
             .toSet()
-        return generateEnumSchema(name, arguments, values)
+        val unknownDefault = classDeclaration.declarations.filterIsInstance<KSClassDeclaration>()
+            .filter { it.annotations.any { annotation -> annotation.shortName.asString() == ZodUnknown::class.simpleName } }
+            .map { it.simpleName.asString() }
+            .firstOrNull()
+        return generateEnumSchema(name, arguments, values, unknownDefault)
     }
 
     /**
@@ -134,13 +138,15 @@ abstract class ZodableGenerator(
                 } ?: subclass.simpleName.asString()
                 val (literalType, literalImports) = resolveLiteralType(serialName)
                 imports.addAll(literalImports)
-                allSchemas.add(processClass(
-                    name = subclassName,
-                    arguments = subclassArguments,
-                    classDeclaration = subclass,
-                    imports = imports,
-                    additionalProperties = setOf("type" to literalType),
-                ))
+                allSchemas.add(
+                    processClass(
+                        name = subclassName,
+                        arguments = subclassArguments,
+                        classDeclaration = subclass,
+                        imports = imports,
+                        additionalProperties = setOf("type" to literalType),
+                    )
+                )
                 allLeafNames.add(subclassName)
             }
         }
@@ -324,7 +330,13 @@ abstract class ZodableGenerator(
         properties: Set<Pair<String, String>>,
     ): String
 
-    abstract fun generateEnumSchema(name: String, arguments: List<String>, values: Set<String>): String
+    abstract fun generateEnumSchema(
+        name: String,
+        arguments: List<String>,
+        values: Set<String>,
+        unknownDefault: String?,
+    ): String
+
     abstract fun generateUnionSchema(name: String, arguments: List<String>, values: Set<String>): String
     abstract fun resolvePrimitiveType(kotlinType: String): Pair<String, List<Import>>?
     abstract fun resolveZodableType(name: String, isGeneric: Boolean): Pair<String, List<Import>>

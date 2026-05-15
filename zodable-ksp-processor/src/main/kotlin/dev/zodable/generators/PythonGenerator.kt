@@ -96,7 +96,12 @@ class PythonGenerator(
         return "${typeVar}class ${name}(BaseModel$generics):\n" + body.ifEmpty { "    pass" }
     }
 
-    override fun generateEnumSchema(name: String, arguments: List<String>, values: Set<String>): String {
+    override fun generateEnumSchema(
+        name: String,
+        arguments: List<String>,
+        values: Set<String>,
+        unknownDefault: String?,
+    ): String {
         return "class ${name}(str, Enum):\n" + values.joinToString("\n") { name -> "    $name = '$name'" }
     }
 

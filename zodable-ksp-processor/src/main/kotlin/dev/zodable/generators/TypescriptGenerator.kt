@@ -74,10 +74,16 @@ class TypescriptGenerator(
                 generateInferType(name, arguments)
     }
 
-    override fun generateEnumSchema(name: String, arguments: List<String>, values: Set<String>): String {
+    override fun generateEnumSchema(
+        name: String,
+        arguments: List<String>,
+        values: Set<String>,
+        unknownDefault: String?,
+    ): String {
         val body = values.joinToString(", ") { "\"$it\"" }
+        val unknownDefaultSuffix = unknownDefault?.let { ".catch(\"$it\")" } ?: ""
         val genericPrefix = generateGenericPrefixType(arguments) + generateGenericPrefixParams(arguments)
-        return "export const ${name}Schema = ${genericPrefix}z.enum([\n    $body\n])" +
+        return "export const ${name}Schema = ${genericPrefix}z.enum([\n    $body\n])" + unknownDefaultSuffix +
                 generateInferType(name, arguments)
     }
 
