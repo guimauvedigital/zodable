@@ -19,7 +19,7 @@ kotlin {
 }
 
 group = "dev.zodable"
-version = "1.7.5"
+version = "1.7.6"
 
 gradlePlugin {
     website = "https://github.com/zodable/zodable"

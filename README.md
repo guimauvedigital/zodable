@@ -8,7 +8,7 @@ Add the following to your `build.gradle.kts`:
 
 ```kotlin
 plugins {
-    id("dev.zodable") version "1.7.5"
+    id("dev.zodable") version "1.7.6"
     id("com.google.devtools.ksp") version "2.3.4" // Adjust version as needed
 }
 ```
@@ -120,14 +120,14 @@ Generated TypeScript:
 
 ```typescript
 // Leaf schemas
-export const ApnsSchema = z.object({ token: z.string(), type: z.literal("Apns") })
-export const FcmSchema  = z.object({ token: z.string(), type: z.literal("Fcm")  })
+export const ApnsSchema = z.object({token: z.string(), type: z.literal("Apns")})
+export const FcmSchema = z.object({token: z.string(), type: z.literal("Fcm")})
 
 // Intermediate union — useful when you only care about push notifications
 export const PushSchema = z.discriminatedUnion("type", [ApnsSchema, FcmSchema])
 
-export const HtmlSchema = z.object({ address: z.string(), type: z.literal("Html") })
-export const TextSchema = z.object({ address: z.string(), type: z.literal("Text") })
+export const HtmlSchema = z.object({address: z.string(), type: z.literal("Html")})
+export const TextSchema = z.object({address: z.string(), type: z.literal("Text")})
 
 export const EmailSchema = z.discriminatedUnion("type", [HtmlSchema, TextSchema])
 
